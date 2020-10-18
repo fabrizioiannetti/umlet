@@ -54,6 +54,17 @@ public class EclipseGUIBuilder extends BaseGUIBuilder {
 		return embedded_panel;
 	}
 
+	// @Override
+	// public JPanel newPalettePanel() {
+	// palettePanelLayout = new CardLayout();
+	// JPanel palettePanel = new JPanel(palettePanelLayout);
+	// palettePanel.addComponentListener(new DividerListener()); // Adding the DividerListener which refreshes Scrollbars here is enough for all dividers
+	// for (SWTPaletteHandler palette : SWTMain.getInstance().getPalettes().values()) {
+	// palettePanel.add(palette.getDrawPanel().getScrollPane(), palette.getName());
+	// }
+	// return palettePanel;
+	// }
+
 	public void setContent(JScrollPane scrollPane) {
 		contentPlaceHolder.removeAll();
 		contentPlaceHolder.add(scrollPane);
