@@ -21,8 +21,15 @@ import javax.swing.text.JTextComponent;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.e4.ui.bindings.keys.KeyBindingDispatcher;
 import org.eclipse.jface.bindings.keys.KeyStroke;
+import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.ITextListener;
+import org.eclipse.jface.text.TextEvent;
+import org.eclipse.jface.text.TextViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -38,11 +45,9 @@ import org.eclipse.ui.part.EditorPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.baselet.control.Main;
 import com.baselet.control.enums.Program;
 import com.baselet.diagram.DiagramHandler;
 import com.baselet.diagram.DrawPanel;
-import com.baselet.diagram.PaletteHandler;
 import com.baselet.element.old.custom.CustomElementHandler;
 import com.baselet.gui.CurrentGui;
 import com.baselet.gui.listener.UmletWindowFocusListener;
@@ -85,6 +90,16 @@ public class Editor extends EditorPart {
 	private Frame mainFrame;
 
 	private Composite mainComposite;
+
+	private SashForm mainForm;
+
+	private SashForm sidebarForm;
+
+	private Canvas paletteCanvas;
+
+	private TextViewer propertiesTextViewer;
+
+	private SWTOwnPropertyPane swtOwnPropertyPane;
 
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
@@ -131,8 +146,28 @@ public class Editor extends EditorPart {
 		getGui().open(handler);
 
 		log.info("Call editor.createPartControl() " + uuid.toString());
-		mainComposite = new Composite(parent, SWT.EMBEDDED);
+
+		// create the three panels (to be decided if they should be moved to views...)
+		// + sash (horizontal split)
+		// +-- diagram pane (embed swing)
+		// +-- sash (vertical split)
+		// +----- palette pane : swt canvas (or embed swing ?)
+		// +----- properties, jface TextViewer
+		mainForm = new SashForm(parent, SWT.HORIZONTAL);
+		mainForm.setLayout(new FillLayout());
+		mainComposite = new Composite(mainForm, SWT.EMBEDDED);
 		mainFrame = SWT_AWT.new_Frame(mainComposite);
+		sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
+		paletteCanvas = new Canvas(sidebarForm, SWT.NONE);
+		propertiesTextViewer = new TextViewer(sidebarForm, SWT.NONE);
+		propertiesTextViewer.setInput(new Document("TODO: properties"));
+		swtOwnPropertyPane = new SWTOwnPropertyPane(propertiesTextViewer);
+		propertiesTextViewer.addTextListener(new ITextListener() {
+			@Override
+			public void textChanged(TextEvent event) {
+				swtOwnPropertyPane.updateGridElement();
+			}
+		});
 
 		// Bug 228221 - SWT no longer receives key events in KeyAdapter when using SWT_AWT.new_Frame AWT frame
 		// Use a RootPaneContainer e.g. JApplet to embed the swing panel in the SWT part
@@ -301,24 +336,25 @@ public class Editor extends EditorPart {
 			handler.getDrawPanel().getSelector().updateSelectorInformation();
 		}
 
-		Display.getDefault().syncExec(new Runnable() {
-			@Override
-			public void run() {
-				/**
-				 * usually the palettes get lost  after switching the editor (for unknown reasons but perhaps because the Main class is build for exactly one palette (like in standalone umlet) but here every tab has its own palette)
-				 * Therefore recreate them and also reselect the current palette and repaint every element with scrollbars (otherwise they have a visual error)
-				 */
-				if (guiComponents.getPalettePanel().getComponentCount() == 0) {
-					for (PaletteHandler palette : Main.getInstance().getPalettes().values()) {
-						guiComponents.getPalettePanel().add(palette.getDrawPanel().getScrollPane(), palette.getName());
-						palette.getDrawPanel().getScrollPane().invalidate();
-					}
-				}
-				showPalette(getSelectedPaletteName());
-				getGui().setValueOfZoomDisplay(handler.getGridSize());
-				guiComponents.getPropertyTextPane().invalidate();
-			}
-		});
+		// TODO: need to update the palette content? (one instance per editor?)
+		// Display.getDefault().syncExec(new Runnable() {
+		// @Override
+		// public void run() {
+		// /**
+		// * usually the palettes get lost after switching the editor (for unknown reasons but perhaps because the Main class is build for exactly one palette (like in standalone umlet) but here every tab has its own palette)
+		// * Therefore recreate them and also reselect the current palette and repaint every element with scrollbars (otherwise they have a visual error)
+		// */
+		// if (guiComponents.getPalettePanel().getComponentCount() == 0) {
+		// for (PaletteHandler palette : Main.getInstance().getPalettes().values()) {
+		// guiComponents.getPalettePanel().add(palette.getDrawPanel().getScrollPane(), palette.getName());
+		// palette.getDrawPanel().getScrollPane().invalidate();
+		// }
+		// }
+		// showPalette(getSelectedPaletteName());
+		// getGui().setValueOfZoomDisplay(handler.getGridSize());
+		// guiComponents.getPropertyTextPane().invalidate();
+		// }
+		// });
 	}
 
 	public DrawPanel getDiagram() {
@@ -336,9 +372,10 @@ public class Editor extends EditorPart {
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
-				if (guiComponents.getMailPanel().isVisible()) {
-					guiComponents.getMailPanel().closePanel();
-				}
+				// TODO@fab MailPanel support
+				// if (guiComponents.getMailPanel().isVisible()) {
+				// guiComponents.getMailPanel().closePanel();
+				// }
 				getGui().editorRemoved(Editor.this);
 			}
 		});
@@ -349,7 +386,8 @@ public class Editor extends EditorPart {
 	}
 
 	public OwnSyntaxPane getPropertyPane() {
-		return guiComponents.getPropertyTextPane();
+		return swtOwnPropertyPane;
+		// return guiComponents.getPropertyTextPane();
 	}
 
 	public JTextComponent getCustomPane() {
@@ -387,27 +425,40 @@ public class Editor extends EditorPart {
 	}
 
 	public void setMailPanelEnabled(boolean enable) {
-		guiComponents.setMailPanelEnabled(enable);
+		// TODO:fab mail support?
+		// guiComponents.setMailPanelEnabled(enable);
 	}
 
 	public boolean isMailPanelVisible() {
-		return guiComponents.getMailPanel().isVisible();
+		// TODO:fab mail support?
+		return false;
+		// return guiComponents.getMailPanel().isVisible();
 	}
 
 	public String getSelectedPaletteName() {
-		return guiComponents.getPaletteList().getSelectedItem().toString();
+		// TODO@fab combo for palette list missing
+		return "";
+		// return guiComponents.getPaletteList().getSelectedItem().toString();
 	}
 
 	public int getMainSplitLocation() {
-		return guiComponents.getMainSplit().getDividerLocation();
+		// TODO:fab widget is disposed here
+		return 0;
+		// return mainForm.getWeights()[0];
+		// return guiComponents.getMainSplit().getDividerLocation();
 	}
 
 	public int getRightSplitLocation() {
-		return guiComponents.getRightSplit().getDividerLocation();
+		// TODO:fab widget is disposed here
+		return 0;
+		// return sidebarForm.getWeights()[0];
+		// return guiComponents.getRightSplit().getDividerLocation();
 	}
 
 	public int getMailSplitLocation() {
-		return guiComponents.getMailSplit().getDividerLocation();
+		// TODO:fab mail support?
+		return 0;
+		// return guiComponents.getMailSplit().getDividerLocation();
 	}
 
 	public void showPalette(final String paletteName) {
