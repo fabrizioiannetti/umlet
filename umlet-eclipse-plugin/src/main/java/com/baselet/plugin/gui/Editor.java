@@ -29,7 +29,6 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.layout.FillLayout;
-import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -95,11 +94,14 @@ public class Editor extends EditorPart {
 
 	private SashForm sidebarForm;
 
-	private Canvas paletteCanvas;
+	// private Canvas paletteCanvas;
+	private Composite paletteCanvas;
 
 	private TextViewer propertiesTextViewer;
 
 	private SWTOwnPropertyPane swtOwnPropertyPane;
+
+	private Frame paletteFrame;
 
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
@@ -158,7 +160,9 @@ public class Editor extends EditorPart {
 		mainComposite = new Composite(mainForm, SWT.EMBEDDED);
 		mainFrame = SWT_AWT.new_Frame(mainComposite);
 		sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
-		paletteCanvas = new Canvas(sidebarForm, SWT.NONE);
+		// TODO@fab: paletteCanvas = new Canvas(sidebarForm, SWT.NONE);
+		paletteCanvas = new Composite(sidebarForm, SWT.EMBEDDED);
+		paletteFrame = SWT_AWT.new_Frame(paletteCanvas);
 		propertiesTextViewer = new TextViewer(sidebarForm, SWT.NONE);
 		propertiesTextViewer.setInput(new Document("TODO: properties"));
 		swtOwnPropertyPane = new SWTOwnPropertyPane(propertiesTextViewer);
@@ -168,6 +172,8 @@ public class Editor extends EditorPart {
 				swtOwnPropertyPane.updateGridElement();
 			}
 		});
+
+		paletteFrame.add(guiComponents.getPalettePanel());
 
 		// Bug 228221 - SWT no longer receives key events in KeyAdapter when using SWT_AWT.new_Frame AWT frame
 		// Use a RootPaneContainer e.g. JApplet to embed the swing panel in the SWT part
