@@ -30,6 +30,7 @@ import org.eclipse.swt.awt.SWT_AWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
@@ -537,6 +538,19 @@ public class Editor extends EditorPart {
 											"</panel_attributes>\r\n" +
 											"    <additional_attributes/>\r\n" +
 											"  </element>\r\n" +
+											"  <element>\r\n" +
+											"    <id>Relation</id>\r\n" +
+											"    <coordinates>\r\n" +
+											"      <x>192</x>\r\n" +
+											"      <y>256</y>\r\n" +
+											"      <w>152</w>\r\n" +
+											"      <h>40</h>\r\n" +
+											"    </coordinates>\r\n" +
+											"    <panel_attributes>lt=[Qualification]&lt;-\r\n" +
+											"m2=1..5,6\r\n" +
+											"</panel_attributes>\r\n" +
+											"    <additional_attributes>40.0;20.0;170.0;20.0</additional_attributes>\r\n" +
+											"  </element>\r\n" +
 											"</diagram>\r\n" +
 											"";
 
@@ -603,6 +617,7 @@ public class Editor extends EditorPart {
 		mainFrame = SWT_AWT.new_Frame(mainComposite);
 		sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
 		paletteCanvas = new Canvas(sidebarForm, SWT.NONE);
+		paletteCanvas.setBackground(new Color(255, 255, 255));
 		propertiesTextViewer = new TextViewer(sidebarForm, SWT.NONE);
 		propertiesTextViewer.setInput(new Document("TODO: properties"));
 		swtOwnPropertyPane = new SWTOwnPropertyPane(propertiesTextViewer);

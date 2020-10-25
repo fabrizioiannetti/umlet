@@ -1,20 +1,29 @@
 package com.baselet.plugin.swt;
 
 import org.eclipse.jface.resource.FontDescriptor;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.RGBA;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Display;
 
 import com.baselet.control.StringStyle;
 import com.baselet.control.basics.geom.DimensionDouble;
 import com.baselet.control.basics.geom.PointDouble;
-import com.baselet.control.basics.geom.Rectangle;
 import com.baselet.control.enums.AlignHorizontal;
 import com.baselet.diagram.draw.DrawFunction;
 import com.baselet.diagram.draw.DrawHandler;
+import com.baselet.diagram.draw.helper.ColorOwn;
+import com.baselet.diagram.draw.helper.Style;
 import com.baselet.element.interfaces.Component;
 import com.baselet.element.interfaces.GridElement;
 
@@ -29,18 +38,72 @@ import com.baselet.element.interfaces.GridElement;
  */
 public class SWTComponent implements Component {
 
+	private static final Color BACKGROUND_DEFAULT = new Color(255, 255, 255, 0);
+
+	private static Color toSWTColor(ColorOwn ownColor) {
+		return new Color(ownColor.getRed(), ownColor.getGreen(), ownColor.getBlue(), ownColor.getAlpha());
+	}
+
+	private static void updateGCWithStyle(GC gc, Style style) {
+		gc.setForeground(toSWTColor(style.getForegroundColor()));
+		gc.setBackground(toSWTColor(style.getBackgroundColor()));
+		gc.setLineWidth((int) style.getLineWidth());
+		switch (style.getLineType()) {
+			case DASHED:
+			case DOUBLE_DASHED:
+				gc.setLineStyle(SWT.LINE_DASH);
+				break;
+			case DOTTED:
+			case DOUBLE_DOTTED:
+				gc.setLineStyle(SWT.LINE_DOT);
+				break;
+			case SOLID:
+			default:
+				gc.setLineStyle(SWT.LINE_SOLID);
+				break;
+		}
+	}
+
 	private final class DrawHandlerExtension extends DrawHandler {
 		@Override
+		protected void addDrawable(final DrawFunction drawable) {
+			final Style styleClone = getStyleClone();
+			super.addDrawable(new DrawFunction() {
+				@Override
+				public void run() {
+					updateGCWithStyle(supportGC, styleClone);
+					drawable.run();
+				}
+			});
+		}
+
+		@Override
 		protected DimensionDouble textDimensionHelper(StringStyle singleLine) {
-			// TODO@fab font size?
+			double fontSizeInPixels = getFontSize();
+			FontMetrics fontMetrics = supportGC.getFontMetrics();
+			final double ppi = 72;
+			final double dpi = supportGC.getDevice().getDPI().y;
+			final int fontSize = (int) (fontSizeInPixels / dpi * ppi);
+			Font oldFont = null;
+			if (fontMetrics.getHeight() != fontSize) {
+				oldFont = supportGC.getFont();
+				supportGC.setFont(
+						FontDescriptor
+								.createFrom(supportGC.getFont())
+								.setHeight(fontSize)
+								.createFont(getDevice()));
+			}
 			Point extent = supportGC.stringExtent(singleLine.getStringWithoutMarkup());
-			return new DimensionDouble(extent.x, extent.y);
+			if (oldFont != null) {
+				supportGC.setFont(oldFont);
+			}
+			return new DimensionDouble(extent.x, fontSizeInPixels);
 		}
 
 		@Override
 		protected double getDefaultFontSize() {
 			// TODO@fab
-			return 12;
+			return 11;
 		}
 
 		@Override
@@ -64,6 +127,7 @@ public class SWTComponent implements Component {
 			addDrawable(new DrawFunction() {
 				@Override
 				public void run() {
+					supportGC.fillOval((int) x, (int) y, (int) width, (int) height);
 					supportGC.drawOval((int) x, (int) y, (int) width, (int) height);
 				}
 			});
@@ -108,6 +172,7 @@ public class SWTComponent implements Component {
 			addDrawable(new DrawFunction() {
 				@Override
 				public void run() {
+					supportGC.fillRectangle((int) x, (int) y, (int) width, (int) height);
 					supportGC.drawRectangle((int) x, (int) y, (int) width, (int) height);
 				}
 			});
@@ -125,7 +190,7 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void printHelper(final StringStyle[] lines, final PointDouble point, final AlignHorizontal align) {
-			final double fontSizeInPixels = getStyleClone().getFontSize();
+			final double fontSizeInPixels = getFontSize();
 			addDrawable(new DrawFunction() {
 				@Override
 				public void run() {
@@ -159,7 +224,7 @@ public class SWTComponent implements Component {
 							default:
 								break;
 						}
-						supportGC.drawText(line.getStringWithoutMarkup(), (int) (x + dx), (int) y);
+						supportGC.drawText(line.getStringWithoutMarkup(), (int) (x + dx), (int) y, false);
 						y += textHeightMax();
 					}
 
@@ -205,11 +270,12 @@ public class SWTComponent implements Component {
 	private final GridElement element;
 	private boolean lastSelected;
 	private boolean redrawNecessary;
-	private Rectangle rect = new Rectangle(0, 0, 32, 32);
+	private com.baselet.control.basics.geom.Rectangle rect = new com.baselet.control.basics.geom.Rectangle(0, 0, 32, 32);
 
 	public SWTComponent(GridElement gridElement) {
 		support = new Image(getDevice(), 100, 100);
 		supportGC = new GC(support);
+		supportGC.setBackground(BACKGROUND_DEFAULT);
 		drawer = new DrawHandlerExtension();
 		metaDrawer = new DrawHandlerExtension();
 		element = gridElement;
@@ -221,29 +287,38 @@ public class SWTComponent implements Component {
 
 	public void drawOn(GC context, boolean isSelected, double scaling) {
 		// override for now
-		scaling = 1d;
+		// scaling = 1d;
 		// TODO@fab needed?
 		// drawer.setNewScaling(scaling);
 		// metaDrawer.setNewScaling(scaling);
 		if (redrawNecessary || lastSelected != isSelected) {
 			redrawNecessary = false;
+			ColorOwn bgOwnColor = drawer.getBackgroundColor();
+			RGB bgColor = new RGB(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue());
+			RGBA bgColorWithAlpha = new RGBA(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue(), bgOwnColor.getAlpha());
 			// TODO@fab scaling ?
 			// bounds.width *= scaling;
 			// bounds.height *= scaling;
-			org.eclipse.swt.graphics.Rectangle swtBounds = new org.eclipse.swt.graphics.Rectangle(
-					0,
-					0,
-					rect.width + 1,
-					rect.height + 1);
+			Rectangle swtBounds = new Rectangle(0, 0, rect.width + 1, rect.height + 1);
 			// (int) (bounds.width * scaling) + (int) Math.ceil(1d * scaling), // canvas size is +1px to make sure a rectangle with width pixels is still visible (in Swing the bound-checking happens in BaseDrawHandlerSwing because you cannot extend the clipping area)
 			// (int) (bounds.height * scaling) + (int) Math.ceil(1d * scaling));
 			if (!swtBounds.equals(support.getBounds())) {
 				supportGC.dispose();
 				support.dispose();
-				support = new Image(getDevice(), swtBounds.width, swtBounds.height);
+				ImageData imageData = new ImageData(swtBounds.width, swtBounds.height, 32, new PaletteData(0x0000FF, 0x00FF, 0xFF));
+				int pixelValue = imageData.palette.getPixel(bgColor);
+				int alpha = bgColorWithAlpha.alpha;
+				for (int ix = 0; ix < swtBounds.width; ix++) {
+					for (int iy = 0; iy < swtBounds.height; iy++) {
+						imageData.setPixel(ix, iy, pixelValue);
+						imageData.setAlpha(ix, iy, alpha);
+					}
+				}
+				support = new Image(getDevice(), imageData);
 				supportGC = new GC(support);
+				supportGC.setBackground(new Color(bgColorWithAlpha));
 			}
-			supportGC.fillRectangle(swtBounds);
+			// supportGC.fillRectangle(support.getBounds());
 			drawer.drawAll(isSelected);
 			if (isSelected) {
 				metaDrawer.drawAll();
@@ -271,7 +346,7 @@ public class SWTComponent implements Component {
 	}
 
 	@Override
-	public Rectangle getBoundsRect() {
+	public com.baselet.control.basics.geom.Rectangle getBoundsRect() {
 		return rect;
 	}
 
@@ -281,7 +356,7 @@ public class SWTComponent implements Component {
 	}
 
 	@Override
-	public void setBoundsRect(Rectangle rect) {
+	public void setBoundsRect(com.baselet.control.basics.geom.Rectangle rect) {
 		this.rect = rect.copy();
 	}
 
