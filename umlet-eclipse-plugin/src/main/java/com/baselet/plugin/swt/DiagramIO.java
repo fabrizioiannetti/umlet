@@ -16,6 +16,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import com.baselet.control.basics.geom.Rectangle;
 import com.baselet.control.config.Config;
+import com.baselet.control.constants.SharedConstants;
 import com.baselet.control.enums.ElementId;
 import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.GridElement;
@@ -78,6 +79,7 @@ public class DiagramIO {
 		private String panelAttributes;
 		private String additionalAttributes;
 		private String id;
+		private float scaleFactor = 1.0f;
 
 		public XMLInputHandler(Diagram diagram, IElementFactory factory) {
 			this.diagram = diagram;
@@ -109,15 +111,17 @@ public class DiagramIO {
 				}
 			}
 			// TODO@fab needed? (not in gwt variant)
-			// else if (elementname.equals("zoom_level")) {
-			// if (diagram != null) {
-			// diagram.setGridSize(Integer.parseInt(elementtext));
-			// }
-			// }
+			else if (elementname.equals("zoom_level")) {
+				if (diagram != null) {
+					int gridSize = Integer.parseInt(elementText);
+					scaleFactor = (float) SharedConstants.DEFAULT_GRID_SIZE / gridSize;
+				}
+			}
 			else if (elementname.equals("element")) {
 				// TODO@fab check: do not support old elements that have no id
 				try {
-					GridElement e = factory.create(ElementId.valueOf(id), new Rectangle(x, y, w, h), panelAttributes, additionalAttributes, diagram);
+					Rectangle rect = new Rectangle((int) (x * scaleFactor), (int) (y * scaleFactor), (int) (w * scaleFactor), (int) (h * scaleFactor));
+					GridElement e = factory.create(ElementId.valueOf(id), rect, panelAttributes, additionalAttributes, diagram);
 					diagram.getGridElements().add(e);
 				} catch (Exception e) {
 					log.error("Cannot instantiate element with id: " + id, e);

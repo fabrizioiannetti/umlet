@@ -15,6 +15,8 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.RGBA;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Display;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.baselet.control.StringStyle;
 import com.baselet.control.basics.geom.DimensionDouble;
@@ -38,6 +40,7 @@ import com.baselet.element.interfaces.GridElement;
  */
 public class SWTComponent implements Component {
 
+	private static final Logger log = LoggerFactory.getLogger(SWTComponent.class);
 	private static final Color BACKGROUND_DEFAULT = new Color(255, 255, 255, 0);
 
 	private static Color toSWTColor(ColorOwn ownColor) {
@@ -65,6 +68,7 @@ public class SWTComponent implements Component {
 	}
 
 	private final class DrawHandlerExtension extends DrawHandler {
+
 		@Override
 		protected void addDrawable(final DrawFunction drawable) {
 			final Style styleClone = getStyleClone();
@@ -103,11 +107,12 @@ public class SWTComponent implements Component {
 		@Override
 		protected double getDefaultFontSize() {
 			// TODO@fab
-			return 11;
+			return 14;
 		}
 
 		@Override
 		public void drawArc(final double x, final double y, final double width, final double height, final double start, final double extent, final boolean open) {
+			log.info("drawArc x=" + x + " y=" + y + " w=" + width + " h=" + height);
 			// TODO@fab open ?
 			addDrawable(new DrawFunction() {
 				@Override
@@ -118,12 +123,14 @@ public class SWTComponent implements Component {
 		}
 
 		@Override
-		public void drawCircle(double cx, double cy, double radius) {
-			drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2);
+		public void drawCircle(double x, double y, double radius) {
+			log.info("drawCircle x=" + x + " y=" + y + " radius=" + radius);
+			drawEllipse(x - radius, y - radius, radius * 2, radius * 2);
 		}
 
 		@Override
 		public void drawEllipse(final double x, final double y, final double width, final double height) {
+			log.info("drawEllipse x=" + x + " y=" + y + " w=" + width + " h=" + height);
 			addDrawable(new DrawFunction() {
 				@Override
 				public void run() {
@@ -135,6 +142,11 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void drawLines(final PointDouble... points) {
+			String linesLog = "";
+			for (PointDouble point : points) {
+				linesLog += point + ":";
+			}
+			log.info("drawLines " + linesLog);
 			if (points.length > 1) {
 				final boolean drawOuterLine = style.getLineWidth() > 0;
 				addDrawable(new DrawFunction() {
@@ -150,12 +162,14 @@ public class SWTComponent implements Component {
 			Path path = new Path(getDevice());
 			boolean first = true;
 			for (PointDouble point : points) {
+				int x = point.x.intValue();
+				int y = point.y.intValue();
 				if (first) {
-					path.moveTo(point.x.floatValue(), point.y.floatValue());
+					path.moveTo(x, y);
 					first = false;
 				}
 				else {
-					path.lineTo(point.x.floatValue(), point.y.floatValue());
+					path.lineTo(x, y);
 				}
 			}
 			if (points[0].equals(points[points.length - 1])) {
@@ -169,6 +183,7 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void drawRectangle(final double x, final double y, final double width, final double height) {
+			log.info("drawRectangle x=" + x + " y=" + y + " w=" + width + " h=" + height);
 			addDrawable(new DrawFunction() {
 				@Override
 				public void run() {
@@ -180,6 +195,7 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void drawRectangleRound(final double x, final double y, final double width, final double height, final double radius) {
+			log.info("drawRectangleRound x=" + x + " y=" + y + " w=" + width + " h=" + height);
 			addDrawable(new DrawFunction() {
 				@Override
 				public void run() {
@@ -190,6 +206,7 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void printHelper(final StringStyle[] lines, final PointDouble point, final AlignHorizontal align) {
+			log.info("printText x=" + point.x + " y=" + point.y + " line[0]=" + (lines.length > 0 ? lines[0] : "<>"));
 			final double fontSizeInPixels = getFontSize();
 			addDrawable(new DrawFunction() {
 				@Override
@@ -224,7 +241,8 @@ public class SWTComponent implements Component {
 							default:
 								break;
 						}
-						supportGC.drawText(line.getStringWithoutMarkup(), (int) (x + dx), (int) y, false);
+						// TODO@fab use transparency = true for text, as the background alpha is not directly transferred
+						supportGC.drawText(line.getStringWithoutMarkup(), (int) (x + dx), (int) y, true);
 						y += textHeightMax();
 					}
 
