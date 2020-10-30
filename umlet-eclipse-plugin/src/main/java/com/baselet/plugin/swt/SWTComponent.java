@@ -67,6 +67,10 @@ public class SWTComponent implements Component {
 		}
 	}
 
+	private interface StyledDrawfunction {
+		public abstract void run(Style style);
+	}
+
 	private final class DrawHandlerExtension extends DrawHandler {
 
 		@Override
@@ -77,6 +81,17 @@ public class SWTComponent implements Component {
 				public void run() {
 					updateGCWithStyle(supportGC, styleClone);
 					drawable.run();
+				}
+			});
+		}
+
+		private void addDrawable(final StyledDrawfunction drawable) {
+			final Style styleClone = getStyleClone();
+			super.addDrawable(new DrawFunction() {
+				@Override
+				public void run() {
+					updateGCWithStyle(supportGC, styleClone);
+					drawable.run(styleClone);
 				}
 			});
 		}
@@ -114,9 +129,10 @@ public class SWTComponent implements Component {
 		public void drawArc(final double x, final double y, final double width, final double height, final double start, final double extent, final boolean open) {
 			log.info("drawArc x=" + x + " y=" + y + " w=" + width + " h=" + height);
 			// TODO@fab open ?
-			addDrawable(new DrawFunction() {
+			addDrawable(new StyledDrawfunction() {
 				@Override
-				public void run() {
+				public void run(Style style) {
+					supportGC.setAlpha(style.getForegroundColor().getAlpha());
 					supportGC.drawArc((int) x, (int) y, (int) width, (int) height, (int) start, (int) extent);
 				}
 			});
@@ -131,10 +147,12 @@ public class SWTComponent implements Component {
 		@Override
 		public void drawEllipse(final double x, final double y, final double width, final double height) {
 			log.info("drawEllipse x=" + x + " y=" + y + " w=" + width + " h=" + height);
-			addDrawable(new DrawFunction() {
+			addDrawable(new StyledDrawfunction() {
 				@Override
-				public void run() {
+				public void run(Style style) {
+					supportGC.setAlpha(style.getBackgroundColor().getAlpha());
 					supportGC.fillOval((int) x, (int) y, (int) width, (int) height);
+					supportGC.setAlpha(style.getForegroundColor().getAlpha());
 					supportGC.drawOval((int) x, (int) y, (int) width, (int) height);
 				}
 			});
@@ -149,9 +167,9 @@ public class SWTComponent implements Component {
 			log.info("drawLines " + linesLog);
 			if (points.length > 1) {
 				final boolean drawOuterLine = style.getLineWidth() > 0;
-				addDrawable(new DrawFunction() {
+				addDrawable(new StyledDrawfunction() {
 					@Override
-					public void run() {
+					public void run(Style style) {
 						drawLineHelper(drawOuterLine, points);
 					}
 				});
@@ -174,9 +192,11 @@ public class SWTComponent implements Component {
 			}
 			if (points[0].equals(points[points.length - 1])) {
 				path.close();
+				supportGC.setAlpha(style.getBackgroundColor().getAlpha());
 				supportGC.fillPath(path);
 			}
 			if (drawOuterLine) {
+				supportGC.setAlpha(style.getForegroundColor().getAlpha());
 				supportGC.drawPath(path);
 			}
 		}
@@ -184,10 +204,12 @@ public class SWTComponent implements Component {
 		@Override
 		public void drawRectangle(final double x, final double y, final double width, final double height) {
 			log.info("drawRectangle x=" + x + " y=" + y + " w=" + width + " h=" + height);
-			addDrawable(new DrawFunction() {
+			addDrawable(new StyledDrawfunction() {
 				@Override
-				public void run() {
+				public void run(Style style) {
+					supportGC.setAlpha(style.getBackgroundColor().getAlpha());
 					supportGC.fillRectangle((int) x, (int) y, (int) width, (int) height);
+					supportGC.setAlpha(style.getForegroundColor().getAlpha());
 					supportGC.drawRectangle((int) x, (int) y, (int) width, (int) height);
 				}
 			});
@@ -196,9 +218,12 @@ public class SWTComponent implements Component {
 		@Override
 		public void drawRectangleRound(final double x, final double y, final double width, final double height, final double radius) {
 			log.info("drawRectangleRound x=" + x + " y=" + y + " w=" + width + " h=" + height);
-			addDrawable(new DrawFunction() {
+			addDrawable(new StyledDrawfunction() {
 				@Override
-				public void run() {
+				public void run(Style style) {
+					supportGC.setAlpha(style.getBackgroundColor().getAlpha());
+					supportGC.fillRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius, (int) radius);
+					supportGC.setAlpha(style.getForegroundColor().getAlpha());
 					supportGC.drawRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius, (int) radius);
 				}
 			});
@@ -208,9 +233,9 @@ public class SWTComponent implements Component {
 		public void printHelper(final StringStyle[] lines, final PointDouble point, final AlignHorizontal align) {
 			log.info("printText x=" + point.x + " y=" + point.y + " line[0]=" + (lines.length > 0 ? lines[0] : "<>"));
 			final double fontSizeInPixels = getFontSize();
-			addDrawable(new DrawFunction() {
+			addDrawable(new StyledDrawfunction() {
 				@Override
-				public void run() {
+				public void run(Style style) {
 					// note@fab: move the y position one line back as SWT uses the top-left corner
 					// of the surrounding box as reference, while swing uses the font baseline/bottom
 					double x = point.x;
