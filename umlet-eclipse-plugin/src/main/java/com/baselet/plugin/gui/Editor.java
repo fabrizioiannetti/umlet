@@ -2,6 +2,7 @@ package com.baselet.plugin.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Frame;
 import java.awt.Panel;
@@ -11,15 +12,16 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import javax.swing.JApplet;
 import javax.swing.SwingUtilities;
-import javax.swing.text.JTextComponent;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.e4.ui.bindings.keys.KeyBindingDispatcher;
+import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.bindings.keys.KeyStroke;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.ITextListener;
@@ -28,35 +30,45 @@ import org.eclipse.jface.text.TextViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.events.FocusAdapter;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.internal.Workbench;
 import org.eclipse.ui.part.EditorPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.baselet.control.basics.geom.Point;
 import com.baselet.control.enums.Program;
 import com.baselet.diagram.DiagramHandler;
 import com.baselet.diagram.DrawPanel;
+import com.baselet.element.Selector;
 import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.GridElement;
+import com.baselet.element.interfaces.HasGridElements;
 import com.baselet.element.old.custom.CustomElementHandler;
 import com.baselet.gui.CurrentGui;
 import com.baselet.gui.listener.UmletWindowFocusListener;
-import com.baselet.gui.pane.OwnSyntaxPane;
+import com.baselet.plugin.gui.EclipseGUI.Pane;
 import com.baselet.plugin.swt.DiagramIO;
 import com.baselet.plugin.swt.IElementFactory;
 import com.baselet.plugin.swt.SWTComponent;
@@ -523,7 +535,7 @@ public class Editor extends EditorPart {
 											"  </element>\r\n" +
 											"</diagram>\r\n" +
 											"";
-	private final String paletteContent2 = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n" +
+	private final String paletteContent3 = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n" +
 											"<diagram program=\"umlet\" version=\"14.2.0\">\r\n" +
 											"  <zoom_level>8</zoom_level>\r\n" +
 											"  <element>\r\n" +
@@ -553,10 +565,29 @@ public class Editor extends EditorPart {
 											"  </element>\r\n" +
 											"</diagram>\r\n" +
 											"";
+	private final String paletteContent2 = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n" +
+											"<diagram program=\"umlet\" version=\"14.2.0\">\r\n" +
+											"  <zoom_level>8</zoom_level>\r\n" +
+											"  <element>\r\n" +
+											"    <id>UMLClass</id>\r\n" +
+											"    <coordinates>\r\n" +
+											"      <x>104</x>\r\n" +
+											"      <y>16</y>\r\n" +
+											"      <w>80</w>\r\n" +
+											"      <h>24</h>\r\n" +
+											"    </coordinates>\r\n" +
+											"    <panel_attributes>/AbstractClass/\r\n" +
+											"</panel_attributes>\r\n" +
+											"    <additional_attributes/>\r\n" +
+											"  </element>\r\n" +
+											"</diagram>\r\n" +
+											"";
 
 	private final Diagram diagram = new SWTDiagramHandler();
 
 	private final IElementFactory factory = new SWTElementFactory();
+
+	private EclipseEditorSelector selector;
 
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
@@ -595,13 +626,54 @@ public class Editor extends EditorPart {
 		return handler.isChanged();
 	}
 
+	public class EclipseEditorSelector extends Selector {
+
+		private final HasGridElements gridElementProvider;
+
+		public EclipseEditorSelector(HasGridElements gridElementProvider) {
+			this.gridElementProvider = gridElementProvider;
+		}
+
+		private final List<GridElement> selectedElements = new ArrayList<GridElement>();
+
+		@Override
+		public List<GridElement> getSelectedElements() {
+			return selectedElements;
+		}
+
+		@Override
+		public List<GridElement> getAllElements() {
+			return gridElementProvider.getGridElements();
+		}
+
+		@Override
+		public void doAfterSelect(GridElement e) {
+			super.doAfterSelect(e);
+			swtOwnPropertyPane.switchToElement(e);
+		}
+	}
+
+	private class PaneTypeOnFocus extends FocusAdapter {
+		private final Pane pane;
+
+		public PaneTypeOnFocus(Pane pane) {
+			super();
+			this.pane = pane;
+		}
+
+		@Override
+		public void focusGained(FocusEvent e) {
+			getGui().setPaneFocused(pane);
+		}
+	}
+
 	@Override
 	public void createPartControl(Composite parent) {
 		getGui().setCurrentEditor(Editor.this); // must be done before initialization of DiagramHandler (eg: to set propertypanel text)
 		handler = new DiagramHandler(diagramFile);
 		getGui().registerEditorForDiagramHandler(Editor.this, handler);
 		getGui().setCurrentDiagramHandler(handler); // must be also set here because onFocus is not always called (eg: tab is opened during eclipse startup)
-		getGui().open(handler);
+		createSwingDiagramPanel(handler);
 
 		log.info("Call editor.createPartControl() " + uuid.toString());
 
@@ -618,7 +690,7 @@ public class Editor extends EditorPart {
 		sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
 		paletteCanvas = new Canvas(sidebarForm, SWT.NONE);
 		paletteCanvas.setBackground(new Color(255, 255, 255));
-		propertiesTextViewer = new TextViewer(sidebarForm, SWT.NONE);
+		propertiesTextViewer = new TextViewer(sidebarForm, SWT.V_SCROLL | SWT.H_SCROLL);
 		propertiesTextViewer.setInput(new Document("TODO: properties"));
 		swtOwnPropertyPane = new SWTOwnPropertyPane(propertiesTextViewer);
 		propertiesTextViewer.addTextListener(new ITextListener() {
@@ -627,16 +699,78 @@ public class Editor extends EditorPart {
 				swtOwnPropertyPane.updateGridElement();
 			}
 		});
+		propertiesTextViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.PROPERTY));
+		paletteCanvas.addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM));
+
+		MenuManager menuManager = new MenuManager();
+		menuManager.add(ActionFactory.COPY.create(getSite().getWorkbenchWindow()));
+		menuManager.add(ActionFactory.CUT.create(getSite().getWorkbenchWindow()));
+		menuManager.add(ActionFactory.PASTE.create(getSite().getWorkbenchWindow()));
+		menuManager.add(ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow()));
+		Menu menu = menuManager.createContextMenu(propertiesTextViewer.getControl());
+		propertiesTextViewer.getControl().setMenu(menu);
 
 		paletteCanvas.addPaintListener(new PaintListener() {
 			@Override
 			public void paintControl(PaintEvent e) {
+				e.gc.setBackground(new Color(new RGB(255, 255, 255)));
+				e.gc.fillRectangle(e.x, e.y, e.width, e.height);
 				List<GridElement> gridElements = diagram.getGridElements();
 				for (GridElement gridElement : gridElements) {
 					com.baselet.element.interfaces.Component component = gridElement.getComponent();
 					SWTComponent swtComp = (SWTComponent) component;
-					swtComp.drawOn(e.gc, false, 1d);
+					swtComp.drawOn(e.gc, selector.isSelected(gridElement), 1d);
 				}
+			}
+		});
+		selector = new EclipseEditorSelector(diagram);
+		paletteCanvas.addMouseListener(new MouseListener() {
+
+			@Override
+			public void mouseUp(MouseEvent e) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void mouseDown(MouseEvent e) {
+				final Point position = new Point(e.x, e.y);
+				GridElement selectedElement = null;
+				for (GridElement ge : diagram.getGridElementsByLayer(false)) { // get elements, highest layer first
+					if (selectedElement != null && selectedElement.getLayer() > ge.getLayer()) {
+						break; // because the following elements have lower layers, break if a valid higher layered element has been found
+					}
+					if (ge.isSelectableOn(position)) {
+						if (selectedElement == null) {
+							selectedElement = ge;
+						}
+						else {
+							boolean newIsSelectedOldNot = selector.isSelected(ge) && !selector.isSelected(selectedElement);
+							boolean oldContainsNew = selectedElement.getRectangle().contains(ge.getRectangle());
+							if (newIsSelectedOldNot || oldContainsNew) {
+								selectedElement = ge;
+							}
+						}
+					}
+				}
+				if (selectedElement != null) {
+					if (selector.isSelected(selectedElement)) {
+						selector.moveToLastPosInList(selectedElement);
+						// propertiesPanel.setGridElement(element, DrawPanel.this);
+					}
+					else {
+						selector.selectOnly(selectedElement);
+					}
+				}
+				else {
+					selector.deselectAll();
+				}
+				paletteCanvas.redraw();
+			}
+
+			@Override
+			public void mouseDoubleClick(MouseEvent e) {
+				// TODO Auto-generated method stub
 			}
 		});
 
@@ -856,14 +990,14 @@ public class Editor extends EditorPart {
 		embeddedPanel.setCursor(cursor);
 	}
 
-	public OwnSyntaxPane getPropertyPane() {
+	public SWTOwnPropertyPane getPropertyPane() {
 		return swtOwnPropertyPane;
-		// return guiComponents.getPropertyTextPane();
 	}
 
-	public JTextComponent getCustomPane() {
-		return guiComponents.getCustomPanel().getTextPane();
-	}
+	// TODO@fab: custom pane
+	// public JTextComponent getCustomPane() {
+	// return guiComponents.getCustomPanel().getTextPane();
+	// }
 
 	public void requestFocus() {
 		embeddedPanel.requestFocus();
@@ -892,7 +1026,7 @@ public class Editor extends EditorPart {
 	}
 
 	public CustomElementHandler getCustomElementHandler() {
-		return guiComponents.getCustomHandler();
+		return null;
 	}
 
 	public void setMailPanelEnabled(boolean enable) {
@@ -932,28 +1066,22 @@ public class Editor extends EditorPart {
 		// return guiComponents.getMailSplit().getDividerLocation();
 	}
 
-	public void showPalette(final String paletteName) {
-		guiComponents.setPaletteActive(paletteName);
-	}
-
-	public void setCustomPanelEnabled(boolean enable) {
-		guiComponents.setCustomPanelEnabled(enable);
-		setDrawPanelEnabled(!enable);
-	}
-
 	private void setDrawPanelEnabled(boolean enable) {
 		handler.getDrawPanel().getScrollPane().setEnabled(enable);
 	}
 
 	public void focusPropertyPane() {
-		guiComponents.getPropertyTextPane().getTextComponent().requestFocus();
+		propertiesTextViewer.getControl().setFocus();
 	}
 
-	public void open(final DiagramHandler handler) {
+	public void createSwingDiagramPanel(final DiagramHandler handler) {
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
-				guiComponents.setContent(handler.getDrawPanel().getScrollPane());
+				// TODO@fab assumption that the placeholder is the first and only child
+				Container contentPlaceHolder = (Container) embeddedPanel.getComponent(0);
+				contentPlaceHolder.removeAll();
+				contentPlaceHolder.add(handler.getDrawPanel().getScrollPane());
 			}
 		});
 	}

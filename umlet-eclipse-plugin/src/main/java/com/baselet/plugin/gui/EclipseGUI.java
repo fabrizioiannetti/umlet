@@ -2,13 +2,8 @@ package com.baselet.plugin.gui;
 
 import java.awt.Cursor;
 import java.awt.Frame;
-import java.awt.Toolkit;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
 import java.util.Collection;
 import java.util.HashMap;
-
-import javax.swing.text.JTextComponent;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -116,26 +111,16 @@ public class EclipseGUI extends BaseGUI {
 	}
 
 	@Override
-	protected void init() {}
+	protected void init() {
+	}
 
 	@Override
 	public void open(DiagramHandler diagram) {
-		if (editor != null) {
-			editor.open(diagram);
-		}
 	}
 
 	@Override
 	public void jumpTo(DiagramHandler diagram) {
 		// not called by eclipse plugin (handles open by createEditor function)
-	}
-
-	@Override
-	public void showPalette(String palette) {
-		super.showPalette(palette);
-		if (editor != null) {
-			editor.showPalette(palette);
-		}
 	}
 
 	@Override
@@ -153,24 +138,17 @@ public class EclipseGUI extends BaseGUI {
 
 	@Override
 	public void setCustomPanelEnabled(boolean enable) {
-		if (editor != null) {
-			editor.setCustomPanelEnabled(enable);
-			if (contributor != null) {
-				contributor.setCustomPanelEnabled(enable);
-			}
-		}
+		// TODO@fab
 	}
 
 	@Override
 	public void setMailPanelEnabled(boolean enable) {
-		if (editor != null) {
-			editor.setMailPanelEnabled(enable);
-		}
+		// TODO@fab
 	}
 
 	@Override
 	public boolean isMailPanelVisible() {
-		return editor.isMailPanelVisible();
+		return false;
 	}
 
 	@Override
@@ -230,40 +208,30 @@ public class EclipseGUI extends BaseGUI {
 	}
 
 	public void panelDoAction(Pane pane, ActionName actionName) {
-		JTextComponent textpane = null;
+		SWTOwnPropertyPane propertyPane = null;
 		if (pane == Pane.PROPERTY) {
-			textpane = editor.getPropertyPane().getTextComponent();
+			propertyPane = editor.getPropertyPane();
 		}
-		else if (pane == Pane.CUSTOMCODE) {
-			textpane = editor.getCustomPane();
-		}
+		// else if (pane == Pane.CUSTOMCODE) {
+		// textpane = editor.getCustomPane();
+		// }
 
-		if (textpane != null) {
-			if (actionName == ActionName.COPY) {
-				textpane.copy();
-			}
-			else if (actionName == ActionName.CUT) {
-				textpane.cut();
-				int pos = textpane.getSelectionStart();
-				textpane.setCaretPosition(pos);
-			}
-			else if (actionName == ActionName.PASTE) {
-				try {
-					// We retrieve the content from the system clipboard
-					Transferable cont = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(this);
-					if (cont != null) {
-						// If it's not null we save the length of the content and add the actual selection start
-						int pos = ((String) cont.getTransferData(DataFlavor.stringFlavor)).length() + textpane.getSelectionStart();
-						textpane.paste();
-						// After pasting the clipboard content we want to set the actual cursor position to the end of the pasted content
-						textpane.setCaretPosition(pos);
-					}
-				} catch (Exception e) {
-					log.error(null, e);
-				}
-			}
-			else if (actionName == ActionName.SELECTALL) {
-				textpane.selectAll();
+		if (propertyPane != null) {
+			switch (actionName) {
+				case COPY:
+					propertyPane.doCopy();
+					break;
+				case CUT:
+					propertyPane.doCut();
+					break;
+				case PASTE:
+					propertyPane.doPaste();
+					break;
+				case SELECTALL:
+					propertyPane.doSelectAll();
+					break;
+				default:
+					break;
 			}
 		}
 	}

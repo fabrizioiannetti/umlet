@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JPanel;
 import javax.swing.text.JTextComponent;
 
+import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.swt.widgets.Display;
 
@@ -52,6 +53,30 @@ public class SWTOwnPropertyPane extends OwnSyntaxPane {
 	@Override
 	public void invalidate() {
 		viewer.refresh();
+	}
+
+	public void doCopy() {
+		if (viewer.canDoOperation(ITextOperationTarget.COPY)) {
+			viewer.doOperation(ITextOperationTarget.COPY);
+		}
+	}
+
+	public void doCut() {
+		if (viewer.canDoOperation(ITextOperationTarget.CUT)) {
+			viewer.doOperation(ITextOperationTarget.CUT);
+		}
+	}
+
+	public void doPaste() {
+		if (viewer.canDoOperation(ITextOperationTarget.PASTE)) {
+			viewer.doOperation(ITextOperationTarget.PASTE);
+		}
+	}
+
+	public void doSelectAll() {
+		if (viewer.canDoOperation(ITextOperationTarget.SELECT_ALL)) {
+			viewer.doOperation(ITextOperationTarget.SELECT_ALL);
+		}
 	}
 
 	@Override

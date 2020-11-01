@@ -26,6 +26,8 @@ import com.baselet.diagram.draw.DrawFunction;
 import com.baselet.diagram.draw.DrawHandler;
 import com.baselet.diagram.draw.helper.ColorOwn;
 import com.baselet.diagram.draw.helper.Style;
+import com.baselet.diagram.draw.helper.theme.Theme;
+import com.baselet.diagram.draw.helper.theme.ThemeFactory;
 import com.baselet.element.interfaces.Component;
 import com.baselet.element.interfaces.GridElement;
 
@@ -313,7 +315,7 @@ public class SWTComponent implements Component {
 	private final GridElement element;
 	private boolean lastSelected;
 	private boolean redrawNecessary;
-	private com.baselet.control.basics.geom.Rectangle rect = new com.baselet.control.basics.geom.Rectangle(0, 0, 32, 32);
+	private com.baselet.control.basics.geom.Rectangle rect = new com.baselet.control.basics.geom.Rectangle(0, 0, 0, 0);
 
 	public SWTComponent(GridElement gridElement) {
 		support = new Image(getDevice(), 100, 100);
@@ -336,32 +338,30 @@ public class SWTComponent implements Component {
 		// metaDrawer.setNewScaling(scaling);
 		if (redrawNecessary || lastSelected != isSelected) {
 			redrawNecessary = false;
-			ColorOwn bgOwnColor = drawer.getBackgroundColor();
-			RGB bgColor = new RGB(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue());
-			RGBA bgColorWithAlpha = new RGBA(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue(), bgOwnColor.getAlpha());
 			// TODO@fab scaling ?
 			// bounds.width *= scaling;
 			// bounds.height *= scaling;
-			Rectangle swtBounds = new Rectangle(0, 0, rect.width + 1, rect.height + 1);
 			// (int) (bounds.width * scaling) + (int) Math.ceil(1d * scaling), // canvas size is +1px to make sure a rectangle with width pixels is still visible (in Swing the bound-checking happens in BaseDrawHandlerSwing because you cannot extend the clipping area)
 			// (int) (bounds.height * scaling) + (int) Math.ceil(1d * scaling));
-			if (!swtBounds.equals(support.getBounds())) {
+			Rectangle swtBounds = new Rectangle(0, 0, rect.width + 1, rect.height + 1);
+			if (true) {// !swtBounds.equals(support.getBounds())) {
+				// create a support image with alpha channel
 				supportGC.dispose();
 				support.dispose();
 				ImageData imageData = new ImageData(swtBounds.width, swtBounds.height, 32, new PaletteData(0x0000FF, 0x00FF, 0xFF));
-				int pixelValue = imageData.palette.getPixel(bgColor);
-				int alpha = bgColorWithAlpha.alpha;
-				for (int ix = 0; ix < swtBounds.width; ix++) {
-					for (int iy = 0; iy < swtBounds.height; iy++) {
-						imageData.setPixel(ix, iy, pixelValue);
-						imageData.setAlpha(ix, iy, alpha);
-					}
-				}
+				imageData.alphaData = new byte[swtBounds.width * swtBounds.height];
 				support = new Image(getDevice(), imageData);
 				supportGC = new GC(support);
-				supportGC.setBackground(new Color(bgColorWithAlpha));
 			}
-			// supportGC.fillRectangle(support.getBounds());
+			// fill with alpha 0 (copyArea is the only SWT GC operation that supports the SOURCE operator)
+			resetSupport();
+			// now fill with background, including alpha
+			ColorOwn bgOwnColor = ThemeFactory.getCurrentTheme().getColor(Theme.ColorStyle.DEFAULT_BACKGROUND);
+			RGBA bgColorWithAlpha = new RGBA(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue(), bgOwnColor.getAlpha());
+			// RGB bgColor = new RGB(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue());
+			supportGC.setBackground(new Color(bgColorWithAlpha));
+			supportGC.setAlpha(bgColorWithAlpha.alpha);
+			supportGC.fillRectangle(support.getBounds());
 			drawer.drawAll(isSelected);
 			if (isSelected) {
 				metaDrawer.drawAll();
@@ -369,6 +369,32 @@ public class SWTComponent implements Component {
 		}
 		lastSelected = isSelected;
 		context.drawImage(support, (int) (element.getRectangle().getX() * scaling), (int) (element.getRectangle().getY() * scaling));
+	}
+
+	private static Image resetPattern;
+
+	private void resetSupport() {
+		if (resetPattern == null) {
+			ImageData imageData = new ImageData(256, 256, 32, new PaletteData(0x0000FF, 0x00FF, 0xFF));
+			int pixelValue = imageData.palette.getPixel(new RGB(255, 255, 255));
+			int alpha = 0;
+			for (int ix = 0; ix < 255; ix++) {
+				for (int iy = 0; iy < 255; iy++) {
+					imageData.setPixel(ix, iy, pixelValue);
+					imageData.setAlpha(ix, iy, alpha);
+				}
+			}
+			resetPattern = new Image(getDevice(), imageData);
+		}
+		int m = (support.getBounds().width + 255) / 256;
+		int n = (support.getBounds().height + 255) / 256;
+		for (int j = 0; j < n; j++) {
+			int y = j * 256;
+			for (int i = 0; i < m; i++) {
+				int x = i * 256;
+				supportGC.copyArea(resetPattern, x, y);
+			}
+		}
 	}
 
 	@Override
