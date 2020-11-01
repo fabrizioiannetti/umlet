@@ -17,13 +17,10 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.baselet.control.Main;
 import com.baselet.control.config.handler.ConfigHandler;
 import com.baselet.control.enums.Program;
 import com.baselet.control.enums.RuntimeType;
 import com.baselet.control.util.Path;
-import com.baselet.gui.CurrentGui;
-import com.baselet.plugin.gui.EclipseGUI;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -83,7 +80,9 @@ public class MainPlugin extends AbstractUIPlugin {
 		initHomeProgramPath();
 		readBundleManifestInfo();
 		ConfigHandler.loadConfig();
-		Main.getInstance().init(new EclipseGUI(Main.getInstance()));
+		// TODO@fab needed?
+		// Main.getInstance().init(null);
+		// EclipseGUI.setCurrent();
 		log.info("Plugin initialized");
 	}
 
@@ -108,7 +107,8 @@ public class MainPlugin extends AbstractUIPlugin {
 	 * @see org.eclipse.ui.plugin.AbstractUIPlugin#stop(org.osgi.framework.BundleContext) */
 	@Override
 	public void stop(BundleContext context) throws Exception {
-		CurrentGui.getInstance().getGui().closeWindow();
+		// TODO@fab needed?
+		// CurrentGui.getInstance().getGui().closeWindow();
 		plugin = null;
 		super.stop(context);
 	}

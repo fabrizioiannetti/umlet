@@ -11,17 +11,9 @@ import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.swt.widgets.Display;
 
-import com.baselet.control.HandlerElementMap;
-import com.baselet.control.Main;
-import com.baselet.diagram.CurrentDiagram;
-import com.baselet.diagram.CustomPreviewHandler;
-import com.baselet.diagram.DiagramHandler;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.gui.AutocompletionText;
-import com.baselet.gui.command.CustomCodePropertyChanged;
-import com.baselet.gui.command.HelpPanelChanged;
 import com.baselet.gui.pane.OwnSyntaxPane;
-import com.baselet.plugin.swt.ChangePanelAttributes;
 
 public class SWTOwnPropertyPane extends OwnSyntaxPane {
 	private List<AutocompletionText> words;
@@ -98,27 +90,28 @@ public class SWTOwnPropertyPane extends OwnSyntaxPane {
 	}
 
 	public void updateGridElement() {
-		GridElement gridElement = Main.getInstance().getEditedGridElement();
-		String s = getText();
-		DiagramHandler handler = CurrentDiagram.getInstance().getDiagramHandler();
-
-		if (gridElement != null) {
-			// only create command if changes were made
-			if (!s.equals(gridElement.getPanelAttributes())) {
-				int newCaretPos = 0;// CurrentGui.getInstance().getGui().getPropertyPane().getTextComponent().getCaretPosition();
-				int oldCaretPos = 0;// newCaretPos - (s.length() - gridElement.getPanelAttributes().length());
-
-				if (HandlerElementMap.getHandlerForElement(gridElement) instanceof CustomPreviewHandler) {
-					HandlerElementMap.getHandlerForElement(gridElement).getController().executeCommand(new CustomCodePropertyChanged(gridElement.getPanelAttributes(), s, oldCaretPos, newCaretPos));
-				}
-				else {
-					HandlerElementMap.getHandlerForElement(gridElement).getController().executeCommand(new ChangePanelAttributes(gridElement, gridElement.getPanelAttributes(), s, oldCaretPos, newCaretPos));
-				}
-			}
-		}
-		else if (handler != null && !s.equals(handler.getHelpText())) { // help panel has been edited
-			handler.getController().executeCommand(new HelpPanelChanged(s));
-		}
+		// TODO@fab
+		// GridElement gridElement = Main.getInstance().getEditedGridElement();
+		// String s = getText();
+		// DiagramHandler handler = CurrentDiagram.getInstance().getDiagramHandler();
+		//
+		// if (gridElement != null) {
+		// // only create command if changes were made
+		// if (!s.equals(gridElement.getPanelAttributes())) {
+		// int newCaretPos = 0;// CurrentGui.getInstance().getGui().getPropertyPane().getTextComponent().getCaretPosition();
+		// int oldCaretPos = 0;// newCaretPos - (s.length() - gridElement.getPanelAttributes().length());
+		//
+		// if (HandlerElementMap.getHandlerForElement(gridElement) instanceof CustomPreviewHandler) {
+		// HandlerElementMap.getHandlerForElement(gridElement).getController().executeCommand(new CustomCodePropertyChanged(gridElement.getPanelAttributes(), s, oldCaretPos, newCaretPos));
+		// }
+		// else {
+		// HandlerElementMap.getHandlerForElement(gridElement).getController().executeCommand(new ChangePanelAttributes(gridElement, gridElement.getPanelAttributes(), s, oldCaretPos, newCaretPos));
+		// }
+		// }
+		// }
+		// else if (handler != null && !s.equals(handler.getHelpText())) { // help panel has been edited
+		// handler.getController().executeCommand(new HelpPanelChanged(s));
+		// }
 
 		// TODO@fab scrollbars?
 		// Scrollbars must be updated cause some entities can grow out of screen border by typing text inside (eg: autoresize custom elements)

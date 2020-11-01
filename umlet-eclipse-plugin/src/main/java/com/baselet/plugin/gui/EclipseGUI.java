@@ -1,7 +1,5 @@
 package com.baselet.plugin.gui;
 
-import java.awt.Cursor;
-import java.awt.Frame;
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -13,19 +11,15 @@ import org.eclipse.swt.widgets.Display;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.baselet.control.CanCloseProgram;
-import com.baselet.control.config.Config;
 import com.baselet.diagram.CurrentDiagram;
 import com.baselet.diagram.DiagramHandler;
 import com.baselet.diagram.DrawPanel;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.old.custom.CustomElementHandler;
-import com.baselet.gui.BaseGUI;
 import com.baselet.gui.CurrentGui;
-import com.baselet.gui.pane.OwnSyntaxPane;
 import com.baselet.plugin.gui.Contributor.ActionName;
 
-public class EclipseGUI extends BaseGUI {
+public class EclipseGUI {
 
 	public enum Pane {
 		PROPERTY, CUSTOMCODE, DIAGRAM
@@ -37,22 +31,17 @@ public class EclipseGUI extends BaseGUI {
 	private final HashMap<DiagramHandler, Editor> diagrams;
 	private Contributor contributor;
 
-	public EclipseGUI(CanCloseProgram main) {
-		super(main);
+	// TODO@fab: needed?
+	private static EclipseGUI current = new EclipseGUI();
+
+	public static EclipseGUI getCurrent() {
+		return current;
+	}
+
+	private EclipseGUI() {
 		diagrams = new HashMap<DiagramHandler, Editor>();
 	}
 
-	@Override
-	public void close(DiagramHandler diagram) {
-		// eclipse does the closing
-	}
-
-	@Override
-	public void closeWindow() {
-		main.closeProgram();
-	}
-
-	@Override
 	public void diagramSelected(DiagramHandler handler) {
 		// the menues are only visible if a diagram is selected. (contributor manages this)
 		// AB: just update the export menu
@@ -64,14 +53,12 @@ public class EclipseGUI extends BaseGUI {
 		contributor.setExportAsEnabled(enable);
 	}
 
-	@Override
 	public void enablePasteMenuEntry() {
 		if (contributor != null) {
 			contributor.setPaste(true);
 		}
 	}
 
-	@Override
 	public CustomElementHandler getCurrentCustomHandler() {
 		if (editor == null) {
 			return null;
@@ -79,98 +66,29 @@ public class EclipseGUI extends BaseGUI {
 		return editor.getCustomElementHandler();
 	}
 
-	@Override
-	public DrawPanel getCurrentDiagram() {
-		if (editor == null) {
-			return null;
-		}
-		return editor.getDiagram();
-	}
-
-	@Override
-	public int getMainSplitPosition() {
-		return Config.getInstance().getMain_split_position(); // in Eclipse the Editors overwrite this constant everytime they are closed (editor.getMainSplitLocation() wouldn't work because the editor is already null)
-	}
-
-	@Override
-	public int getRightSplitPosition() {
-		return Config.getInstance().getRight_split_position();
-	}
-
-	@Override
-	public int getMailSplitPosition() {
-		return Config.getInstance().getMail_split_position();
-	}
-
-	@Override
-	public String getSelectedPalette() {
-		if (editor != null) {
-			return editor.getSelectedPaletteName();
-		}
-		return null;
-	}
-
-	@Override
-	protected void init() {
-	}
-
-	@Override
-	public void open(DiagramHandler diagram) {
-	}
-
-	@Override
-	public void jumpTo(DiagramHandler diagram) {
-		// not called by eclipse plugin (handles open by createEditor function)
-	}
-
-	@Override
-	public void setCustomElementChanged(CustomElementHandler handler,
-			boolean changed) {
-
-	}
-
-	@Override
 	public void setCustomElementSelected(boolean selected) {
+		// TODO@fab
 		if (editor != null && contributor != null) {
 			contributor.setCustomElementSelected(selected);
 		}
 	}
 
-	@Override
-	public void setCustomPanelEnabled(boolean enable) {
+	public void setCustomPanelEnabled(@SuppressWarnings("unused") boolean enable) {
 		// TODO@fab
 	}
 
-	@Override
-	public void setMailPanelEnabled(boolean enable) {
-		// TODO@fab
-	}
-
-	@Override
-	public boolean isMailPanelVisible() {
-		return false;
-	}
-
-	@Override
-	public void updateDiagramName(DiagramHandler diagram, String name) {
+	public void updateDiagramName(DiagramHandler diagram, @SuppressWarnings("unused") String name) {
+		// TODO@fab called?
 		Editor editor = diagrams.get(diagram);
 		if (editor != null) {
 			editor.diagramNameChanged();
 		}
 	}
 
-	@Override
-	public void setDiagramChanged(DiagramHandler diagram, boolean changed) {
+	public void setDiagramChanged(DiagramHandler diagram, @SuppressWarnings("unused") boolean changed) {
 		Editor editor = diagrams.get(diagram);
 		if (editor != null) {
 			editor.dirtyChanged();
-		}
-	}
-
-	@Override
-	public void setCursor(Cursor cursor) {
-		if (editor != null) {
-			editor.setCursor(cursor);
 		}
 	}
 
@@ -186,28 +104,8 @@ public class EclipseGUI extends BaseGUI {
 		this.editor = editor;
 	}
 
-	public void editorRemoved(Editor editor) {
-		// Before removing the editor, we have to store the actual splitpositions and lastUsedPalette to variables so that a new editor has the same values
-		Config.getInstance().setMain_split_position(editor.getMainSplitLocation());
-		Config.getInstance().setRight_split_position(editor.getRightSplitLocation());
-		Config.getInstance().setLastUsedPalette(getSelectedPalette());
-		diagrams.remove(editor.getDiagram().getHandler());
-		if (editor.equals(this.editor)) {
-			this.editor = null;
-		}
-	}
-
-	@Override
-	public OwnSyntaxPane getPropertyPane() {
-		if (editor != null) {
-			return editor.getPropertyPane();
-		}
-		else {
-			return null;
-		}
-	}
-
 	public void panelDoAction(Pane pane, ActionName actionName) {
+		// TODO@fab used?
 		SWTOwnPropertyPane propertyPane = null;
 		if (pane == Pane.PROPERTY) {
 			propertyPane = editor.getPropertyPane();
@@ -236,26 +134,19 @@ public class EclipseGUI extends BaseGUI {
 		}
 	}
 
-	@Override
-	public void requestFocus() {
-		if (editor != null) {
-			editor.requestFocus();
-		}
-	}
-
 	public void setContributor(Contributor contributor) {
 		this.contributor = contributor;
 	}
 
-	@Override
 	public void elementsSelected(Collection<GridElement> selectedElements) {
-		super.elementsSelected(selectedElements);
+		// TODO@fab used?
 		if (contributor != null) {
 			contributor.setElementsSelected(selectedElements);
 		}
 	}
 
 	public void setPaneFocused(final Pane pane) {
+		// TODO@fab used?
 		if (contributor != null) {
 			// must be executed from within the SWT Display thread (see https://stackoverflow.com/questions/5980316/invalid-thread-access-error-with-java-swt)
 			Display.getDefault().syncExec(new Runnable() {
@@ -267,30 +158,15 @@ public class EclipseGUI extends BaseGUI {
 		}
 	}
 
-	@Override
 	public void setValueOfZoomDisplay(int i) {
+		// TODO@fab
 		if (contributor != null) {
 			contributor.updateZoomMenuRadioButton(i);
 		}
 	}
 
-	@Override
-	public void afterSaving() {
-		super.afterSaving();
-		EclipseGUI.refreshWorkspace();
-	}
-
-	@Override
-	public void focusPropertyPane() {
-		editor.focusPropertyPane();
-	}
-
-	@Override
-	public Frame getMainFrame() {
-		return editor.getMainFrame();
-	}
-
 	public static void refreshWorkspace() {
+		// TODO@fab what for?
 		IWorkspaceRoot myWorkspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
 		try {
 			myWorkspaceRoot.refreshLocal(IResource.DEPTH_INFINITE, null);
@@ -299,13 +175,13 @@ public class EclipseGUI extends BaseGUI {
 		}
 	}
 
-	@Override
 	public boolean hasExtendedContextMenu() {
+		// TODO@fab used?
 		return false;
 	}
 
-	@Override
 	public boolean saveWindowSizeInConfig() {
+		// TODO@fab used?
 		return false;
 	}
 }

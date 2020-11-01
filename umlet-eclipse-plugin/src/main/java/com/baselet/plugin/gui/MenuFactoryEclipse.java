@@ -27,27 +27,19 @@ import static com.baselet.control.constants.MenuConstants.UNDO;
 import static com.baselet.control.constants.MenuConstants.VIDEO_TUTORIAL;
 import static com.baselet.control.constants.MenuConstants.ZOOM;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.SwingUtilities;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.ide.IDE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.baselet.control.Main;
 import com.baselet.control.constants.Constants;
 import com.baselet.diagram.CurrentDiagram;
 import com.baselet.diagram.DiagramHandler;
@@ -73,16 +65,17 @@ public class MenuFactoryEclipse extends MenuFactory {
 		DiagramHandler actualHandler = CurrentDiagram.getInstance().getDiagramHandler();
 		// Edit Palette cannot be put in a separate invokeLater thread, or otherwise getActivePage() will be null!
 		if (menuItem.equals(EDIT_CURRENT_PALETTE)) {
-			String paletteName = Main.getInstance().getPalette().getFileHandler().getFullPathName();
-			IFileStore fileStore = EFS.getLocalFileSystem().getStore(new File(paletteName).toURI());
-			if (!fileStore.fetchInfo().isDirectory() && fileStore.fetchInfo().exists()) {
-				IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-				try {
-					IDE.openEditorOnFileStore(page, fileStore);
-				} catch (PartInitException e) {
-					log.error("Cannot open palette file", e);
-				}
-			}
+			// TODO@fab
+			// String paletteName = Main.getInstance().getPalette().getFileHandler().getFullPathName();
+			// IFileStore fileStore = EFS.getLocalFileSystem().getStore(new File(paletteName).toURI());
+			// if (!fileStore.fetchInfo().isDirectory() && fileStore.fetchInfo().exists()) {
+			// IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			// try {
+			// IDE.openEditorOnFileStore(page, fileStore);
+			// } catch (PartInitException e) {
+			// log.error("Cannot open palette file", e);
+			// }
+			// }
 		}
 		else if (menuItem.equals(SEARCH)) {
 			SwingUtilities.invokeLater(new Runnable() {
@@ -223,7 +216,9 @@ public class MenuFactoryEclipse extends MenuFactory {
 
 	public IMenuManager createNewCustomElementFromTemplate(final Contributor con) {
 		IMenuManager menu = new MenuManager(NEW_FROM_TEMPLATE);
-		for (String template : Main.getInstance().getTemplateNames()) {
+		// TODO@fab no Main
+		String[] templates = { "no templates yet" };
+		for (String template : /* Main.getInstance().getTemplateNames() */templates) {
 			Action a = createAction(template, NEW_FROM_TEMPLATE, template);
 			menu.add(a);
 			aList.add(a);

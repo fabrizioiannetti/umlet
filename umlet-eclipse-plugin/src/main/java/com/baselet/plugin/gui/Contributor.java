@@ -19,7 +19,6 @@ import org.eclipse.ui.part.EditorActionBarContributor;
 import com.baselet.control.constants.MenuConstants;
 import com.baselet.control.enums.Program;
 import com.baselet.element.interfaces.GridElement;
-import com.baselet.gui.CurrentGui;
 import com.baselet.plugin.gui.EclipseGUI.Pane;
 
 public class Contributor extends EditorActionBarContributor {
@@ -66,7 +65,7 @@ public class Contributor extends EditorActionBarContributor {
 		Action copyActionPropPanel = new Action() {
 			@Override
 			public void run() {
-				((EclipseGUI) CurrentGui.getInstance().getGui()).panelDoAction(pane, action);
+				EclipseGUI.getCurrent().panelDoAction(pane, action);
 			}
 		};
 		return copyActionPropPanel;
@@ -108,7 +107,7 @@ public class Contributor extends EditorActionBarContributor {
 
 	@Override
 	public void contributeToMenu(IMenuManager manager) {
-		((EclipseGUI) CurrentGui.getInstance().getGui()).setContributor(this);
+		EclipseGUI.getCurrent().setContributor(this);
 
 		IMenuManager menu = new MenuManager(Program.getInstance().getProgramName().toString());
 		IMenuManager custom = new MenuManager(MenuConstants.CUSTOM_ELEMENTS);
