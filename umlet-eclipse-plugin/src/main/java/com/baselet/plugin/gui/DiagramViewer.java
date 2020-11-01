@@ -96,6 +96,9 @@ public class DiagramViewer extends Viewer {
 
 			@Override
 			public void mouseDown(MouseEvent e) {
+				if ((e.stateMask & SWT.BUTTON_MASK) != SWT.BUTTON1) {
+					return;
+				}
 				final Point position = new Point(e.x, e.y);
 				GridElement selectedElement = null;
 				for (GridElement ge : diagram.getGridElementsByLayer(false)) { // get elements, highest layer first

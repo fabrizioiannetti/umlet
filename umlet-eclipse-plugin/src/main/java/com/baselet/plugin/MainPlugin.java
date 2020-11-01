@@ -1,10 +1,15 @@
 package com.baselet.plugin;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URL;
+import java.nio.file.FileSystems;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.IStatus;
@@ -28,6 +33,8 @@ import com.baselet.control.util.Path;
 public class MainPlugin extends AbstractUIPlugin {
 
 	Logger log = LoggerFactory.getLogger(MainPlugin.class);
+
+	private List<File> paletteFiles;
 
 	// The plug-in ID
 	private static String pluginId;
@@ -83,7 +90,29 @@ public class MainPlugin extends AbstractUIPlugin {
 		// TODO@fab needed?
 		// Main.getInstance().init(null);
 		// EclipseGUI.setCurrent();
+		paletteFiles = scanForPalettes();
 		log.info("Plugin initialized");
+	}
+
+	public List<String> getPaletteNames() {
+		ArrayList<String> names = new ArrayList<String>(paletteFiles.size());
+		for (File file : paletteFiles) {
+			names.add(file.getName().replaceFirst(".uxf$", ""));
+		}
+		return names;
+	}
+
+	public List<File> getPaletteFiles() {
+		return paletteFiles;
+	}
+
+	public File getPaletteFile(String name) {
+		for (File file : paletteFiles) {
+			if (file.getName().equals(name + ".uxf")) {
+				return file;
+			}
+		}
+		return null;
 	}
 
 	private void initHomeProgramPath() throws IOException {
@@ -94,6 +123,20 @@ public class MainPlugin extends AbstractUIPlugin {
 			path = "/" + path;
 		}
 		Path.setHomeProgram(path);
+	}
+
+	private List<File> scanForPalettes() {
+		// scan palettes directory...
+		java.nio.file.Path palettesDir = FileSystems.getDefault().getPath(Path.homeProgram(), "palettes");
+		final String suffix = "." + Program.getInstance().getExtension();
+		File[] paletteFiles = palettesDir.toFile().listFiles(new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				// TODO Auto-generated method stub
+				return name.endsWith(suffix);
+			}
+		});
+		return Arrays.asList(paletteFiles);
 	}
 
 	// Issue 83: Use OSGI Bundle to read Manifest information
