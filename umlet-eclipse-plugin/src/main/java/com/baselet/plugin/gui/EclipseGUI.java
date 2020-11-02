@@ -32,10 +32,10 @@ public class EclipseGUI {
 	private Contributor contributor;
 
 	// TODO@fab: needed?
-	private static EclipseGUI current = new EclipseGUI();
+	private static EclipseGUI instance = new EclipseGUI();
 
-	public static EclipseGUI getCurrent() {
-		return current;
+	public static EclipseGUI get() {
+		return instance;
 	}
 
 	private EclipseGUI() {

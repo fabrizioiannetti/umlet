@@ -65,7 +65,7 @@ public class Contributor extends EditorActionBarContributor {
 		Action copyActionPropPanel = new Action() {
 			@Override
 			public void run() {
-				EclipseGUI.getCurrent().panelDoAction(pane, action);
+				EclipseGUI.get().panelDoAction(pane, action);
 			}
 		};
 		return copyActionPropPanel;
@@ -107,7 +107,7 @@ public class Contributor extends EditorActionBarContributor {
 
 	@Override
 	public void contributeToMenu(IMenuManager manager) {
-		EclipseGUI.getCurrent().setContributor(this);
+		EclipseGUI.get().setContributor(this);
 
 		IMenuManager menu = new MenuManager(Program.getInstance().getProgramName().toString());
 		IMenuManager custom = new MenuManager(MenuConstants.CUSTOM_ELEMENTS);

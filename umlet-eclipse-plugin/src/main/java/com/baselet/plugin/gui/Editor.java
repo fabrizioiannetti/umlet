@@ -1,7 +1,6 @@
 package com.baselet.plugin.gui;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +12,9 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.ITextListener;
 import org.eclipse.jface.text.TextEvent;
 import org.eclipse.jface.text.TextViewer;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.FocusAdapter;
@@ -31,10 +33,8 @@ import org.eclipse.ui.part.EditorPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.baselet.element.Selector;
 import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.GridElement;
-import com.baselet.element.interfaces.HasGridElements;
 import com.baselet.element.old.custom.CustomElementHandler;
 import com.baselet.plugin.MainPlugin;
 import com.baselet.plugin.gui.EclipseGUI.Pane;
@@ -64,10 +64,6 @@ public class Editor extends EditorPart {
 	public boolean isSaveAsAllowed() {
 		return true;
 	}
-
-	private SashForm mainForm;
-
-	private SashForm sidebarForm;
 
 	private TextViewer propertiesTextViewer;
 
@@ -108,50 +104,66 @@ public class Editor extends EditorPart {
 		return false;
 	}
 
-	public class EclipseEditorSelector extends Selector {
-
-		private final HasGridElements gridElementProvider;
-
-		public EclipseEditorSelector(HasGridElements gridElementProvider) {
-			this.gridElementProvider = gridElementProvider;
-		}
-
-		private final List<GridElement> selectedElements = new ArrayList<GridElement>();
+	private final class DiagramSelectionToAttributesBinding implements ISelectionChangedListener, ITextListener {
+		private boolean syncBack;
+		private DiagramViewer source;
 
 		@Override
-		public List<GridElement> getSelectedElements() {
-			return selectedElements;
+		public void selectionChanged(SelectionChangedEvent event) {
+			event.getSource();
+			Object[] array = event.getStructuredSelection().toArray();
+			if (array.length > 0) {
+				if (syncBack) {
+					DiagramViewer newSource = (DiagramViewer) event.getSource();
+					if (source != newSource) {
+						source = newSource;
+					}
+				}
+				GridElement e = (GridElement) array[array.length - 1];
+				propertiesTextViewer.getDocument().set(e.getPanelAttributes());
+			}
+		}
+
+		public DiagramSelectionToAttributesBinding bidirectional() {
+			syncBack = true;
+			propertiesTextViewer.addTextListener(this);
+			return this;
 		}
 
 		@Override
-		public List<GridElement> getAllElements() {
-			return gridElementProvider.getGridElements();
-		}
-
-		@Override
-		public void doAfterSelect(GridElement e) {
-			super.doAfterSelect(e);
-			swtOwnPropertyPane.switchToElement(e);
+		public void textChanged(TextEvent event) {
+			if (source != null) {
+				source.setAttributesForSelected(propertiesTextViewer.getDocument().get());
+			}
 		}
 	}
 
 	private class PaneTypeOnFocus extends FocusAdapter {
 		private final Pane pane;
+		private final DiagramViewer viewer;
 
 		public PaneTypeOnFocus(Pane pane) {
+			this(pane, null);
+		}
+
+		public PaneTypeOnFocus(Pane pane, DiagramViewer viewer) {
 			super();
 			this.pane = pane;
+			this.viewer = viewer;
 		}
 
 		@Override
 		public void focusGained(FocusEvent e) {
-			getGui().setPaneFocused(pane);
+			EclipseGUI.get().setPaneFocused(pane);
+			if (pane == Pane.DIAGRAM && viewer != null) {
+				viewer.setSelection(new StructuredSelection());
+			}
 		}
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
-		getGui().setCurrentEditor(Editor.this); // must be done before initialization of DiagramHandler (eg: to set propertypanel text)
+		EclipseGUI.get().setCurrentEditor(Editor.this); // must be done before initialization of DiagramHandler (eg: to set propertypanel text)
 
 		log.info("Call editor.createPartControl() " + uuid.toString());
 
@@ -161,10 +173,10 @@ public class Editor extends EditorPart {
 		// +-- sash (vertical split)
 		// +----- palette pane : swt canvas
 		// +----- properties, jface TextViewer
-		mainForm = new SashForm(parent, SWT.HORIZONTAL);
+		SashForm mainForm = new SashForm(parent, SWT.HORIZONTAL);
 		mainForm.setLayout(new FillLayout());
 		diagramViewer = new DiagramViewer(mainForm);
-		sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
+		SashForm sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
 		paletteViewer = new DiagramViewer(sidebarForm);
 		propertiesTextViewer = new TextViewer(sidebarForm, SWT.V_SCROLL | SWT.H_SCROLL);
 		propertiesTextViewer.setInput(new Document("TODO: properties"));
@@ -181,9 +193,18 @@ public class Editor extends EditorPart {
 
 		// set the pane type on focus events
 		propertiesTextViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.PROPERTY));
-		paletteViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM));
-		diagramViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM));
+		paletteViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, diagramViewer));
+		diagramViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, paletteViewer));
 
+		// mark diagrams as exclusive (only one can have selected elements)
+		diagramViewer.setExclusiveTo(paletteViewer);
+		paletteViewer.setExclusiveTo(diagramViewer);
+
+		// listen to selection changes in diagrams and update properties content
+		diagramViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding().bidirectional());
+		paletteViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding());
+
+		// context menus
 		MenuManager propertiesMM = new MenuManager();
 		propertiesMM.add(ActionFactory.COPY.create(getSite().getWorkbenchWindow()));
 		propertiesMM.add(ActionFactory.CUT.create(getSite().getWorkbenchWindow()));
@@ -206,8 +227,13 @@ public class Editor extends EditorPart {
 		paletteMM.add(ActionFactory.PASTE.create(getSite().getWorkbenchWindow()));
 		paletteMM.add(ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow()));
 		paletteMM.add(new Separator());
+		paletteMM.add(createPalettesListSubmenu());
+		menu = paletteMM.createContextMenu(paletteViewer.getControl());
+		paletteViewer.getControl().setMenu(menu);
+	}
+
+	private MenuManager createPalettesListSubmenu() {
 		MenuManager paletteListMM = new MenuManager("Palettes");
-		paletteMM.add(paletteListMM);
 		List<String> paletteNames = MainPlugin.getDefault().getPaletteNames();
 		for (String name : paletteNames) {
 			paletteListMM.add(new Action(name) {
@@ -219,8 +245,7 @@ public class Editor extends EditorPart {
 				}
 			});
 		}
-		menu = paletteMM.createContextMenu(paletteViewer.getControl());
-		paletteViewer.getControl().setMenu(menu);
+		return paletteListMM;
 	}
 
 	private void setCurrentPalette(File paletteFile, boolean refreshViewer) {
@@ -232,14 +257,10 @@ public class Editor extends EditorPart {
 		}
 	}
 
-	private EclipseGUI getGui() {
-		return EclipseGUI.getCurrent();
-	}
-
 	@Override
 	public void setFocus() {
 		log.info("Call editor.setFocus() " + uuid.toString());
-		getGui().setCurrentEditor(this);
+		EclipseGUI.get().setCurrentEditor(this);
 	}
 
 	@Override
