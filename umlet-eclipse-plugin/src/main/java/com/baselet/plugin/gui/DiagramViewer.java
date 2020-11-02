@@ -11,6 +11,8 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
@@ -19,9 +21,11 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Tracker;
 
 import com.baselet.command.Command;
 import com.baselet.command.Controller;
@@ -48,42 +52,54 @@ public class DiagramViewer extends Viewer {
 
 	private final class MouseHandler implements MouseListener, MouseMoveListener, MouseWheelListener {
 		private Point mouseDownAt;
-		private DragMachine dragMachine;
-
+		private IDragMachine dragMachine;
+	
 		@Override
 		public void mouseScrolled(MouseEvent e) {
 			// TODO Auto-generated method stub
-
 		}
-
+	
 		@Override
 		public void mouseMove(MouseEvent e) {
 			if (dragMachine == null &&
 				mouseDownAt != null &&
 				Math.min(Math.abs(e.x - mouseDownAt.x), Math.abs(e.x - mouseDownAt.y)) > gridSize) {
-				dragMachine = new DragMachine(mouseDownAt);
+				if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+					dragMachine = new LassoMachine(mouseDownAt);
+				}
+				else {
+					dragMachine = new DragMachine(mouseDownAt);
+				}
 			}
 			if (dragMachine != null) {
 				if (dragMachine.dragTo(new Point(e.x, e.y))) {
 					canvas.redraw();
 				}
+				if (dragMachine.isDone()) {
+					dragMachine = null;
+					mouseDownAt = null;
+				}
 			}
 		}
-
+	
 		@Override
 		public void mouseDoubleClick(MouseEvent e) {
 			// TODO Auto-generated method stub
-
+	
 		}
-
+	
 		@Override
 		public void mouseDown(MouseEvent e) {
 			mouseDownAt = new Point(e.x, e.y);
 			if (e.button == 1) {
-				selectAtMouseDownPosition();
+				if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+				}
+				else {
+					selectAtMouseDownPosition();
+				}
 			}
 		}
-
+	
 		@Override
 		public void mouseUp(MouseEvent e) {
 			if (dragMachine != null) {
@@ -92,7 +108,7 @@ public class DiagramViewer extends Viewer {
 			}
 			mouseDownAt = null;
 		}
-
+	
 		private void selectAtMouseDownPosition() {
 			GridElement selectedElement = getElementAtPosition(mouseDownAt);
 			if (selectedElement != null) {
@@ -108,7 +124,7 @@ public class DiagramViewer extends Viewer {
 			}
 			canvas.redraw();
 		}
-
+	
 		private GridElement getElementAtPosition(final Point position) {
 			GridElement selectedElement = null;
 			for (GridElement ge : diagram.getGridElementsByLayer(false)) { // get elements, highest layer first
@@ -135,21 +151,21 @@ public class DiagramViewer extends Viewer {
 	private class DiagramElementSelector extends Selector {
 		private final HasGridElements gridElementProvider;
 		private final List<GridElement> selectedElements = new ArrayList<GridElement>();
-
+	
 		public DiagramElementSelector(HasGridElements gridElementProvider) {
 			this.gridElementProvider = gridElementProvider;
 		}
-
+	
 		@Override
 		public List<GridElement> getSelectedElements() {
 			return selectedElements;
 		}
-
+	
 		@Override
 		public List<GridElement> getAllElements() {
 			return gridElementProvider.getGridElements();
 		}
-
+	
 		@Override
 		public void doAfterSelectionChanged() {
 			ArrayList<GridElement> elements = new ArrayList<GridElement>(getSelectedElements());
@@ -215,6 +231,7 @@ public class DiagramViewer extends Viewer {
 		if (input instanceof SWTDiagramHandler) {
 			diagram = (SWTDiagramHandler) input;
 			selector = new DiagramElementSelector(diagram);
+			controller.clear();
 		}
 	}
 
@@ -252,7 +269,17 @@ public class DiagramViewer extends Viewer {
 		exclusiveTo = other;
 	}
 
-	private class DragMachine {
+	private interface IDragMachine {
+
+		boolean dragTo(final Point newPos);
+
+		void terminate();
+
+		boolean isDone();
+
+	}
+
+	private class DragMachine implements IDragMachine {
 		private Point oldPoint;
 		private List<GridElement> elementsToDrag;
 		boolean firstDrag;
@@ -270,9 +297,11 @@ public class DiagramViewer extends Viewer {
 			firstDrag = true;
 		}
 
+		@Override
 		public void terminate() {
 		}
 
+		@Override
 		public boolean dragTo(final Point newPos) {
 			Point snapPos = snapToGrid(newPos);
 			Point off = new Point(snapPos.x - oldPoint.x, snapPos.y - oldPoint.y);
@@ -286,11 +315,6 @@ public class DiagramViewer extends Viewer {
 		}
 
 		private void dragElements(Point off) {
-			// TODO@fab needed?
-			// if (disableElementMovement()) {
-			// return;
-			// }
-
 			Vector<Command> moveCommands = new Vector<Command>();
 			for (GridElement e : elementsToDrag) {
 				moveCommands.add(new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, true, StickableMap.EMPTY_MAP));
@@ -302,11 +326,66 @@ public class DiagramViewer extends Viewer {
 			return new Point((point.x + gridSize / 2) / gridSize * gridSize, (point.y + gridSize / 2) / gridSize * gridSize);
 		}
 
-		// only call after mouseDragged
-		// TODO@fab needed?
-		// protected final boolean disableElementMovement() {
-		// return disableElementMovement;
-		// }
+		@Override
+		public boolean isDone() {
+			return false;
+		}
+	}
+
+	private class LassoMachine implements IDragMachine, ControlListener {
+
+		private final Point initialPos;
+		private final Tracker tracker;
+		private final ArrayList<GridElement> initiallySelected;
+		private boolean done;
+
+		public LassoMachine(Point mouseDownAt) {
+			initialPos = mouseDownAt;
+			tracker = new Tracker(canvas, SWT.RESIZE);
+			initiallySelected = new ArrayList<GridElement>(selector.getSelectedElements());
+			done = false;
+		}
+
+		@Override
+		public boolean dragTo(Point newPos) {
+			tracker.setRectangles(new Rectangle[] { new Rectangle(initialPos.x, initialPos.y, Math.abs(newPos.x - initialPos.x), Math.abs(newPos.y - initialPos.y)) });
+			tracker.addControlListener(this);
+			if (!tracker.open()) {
+				// tracker cancelled, revert selection
+				selector.selectOnly(initiallySelected);
+			}
+			done = true;
+			return true;
+		}
+
+		@Override
+		public void terminate() {
+			tracker.dispose();
+		}
+
+		@Override
+		public boolean isDone() {
+			return done;
+		}
+
+		@Override
+		public void controlMoved(ControlEvent e) {
+			// nothing to do: only resize
+		}
+
+		@Override
+		public void controlResized(ControlEvent e) {
+			Rectangle r = tracker.getRectangles()[0];
+			com.baselet.control.basics.geom.Rectangle rectangle = new com.baselet.control.basics.geom.Rectangle(r.x, r.y, r.width, r.height);
+			List<GridElement> toSelect = new ArrayList<GridElement>();
+			for (GridElement element : selector.getAllElements()) {
+				if (element.isInRange(rectangle)) {
+					toSelect.add(element);
+				}
+			}
+			selector.selectOnly(toSelect);
+			canvas.redraw();
+		}
 
 	}
 
