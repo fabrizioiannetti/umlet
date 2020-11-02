@@ -53,12 +53,12 @@ public class DiagramViewer extends Viewer {
 	private final class MouseHandler implements MouseListener, MouseMoveListener, MouseWheelListener {
 		private Point mouseDownAt;
 		private IDragMachine dragMachine;
-	
+
 		@Override
 		public void mouseScrolled(MouseEvent e) {
 			// TODO Auto-generated method stub
 		}
-	
+
 		@Override
 		public void mouseMove(MouseEvent e) {
 			if (dragMachine == null &&
@@ -76,30 +76,27 @@ public class DiagramViewer extends Viewer {
 					canvas.redraw();
 				}
 				if (dragMachine.isDone()) {
+					dragMachine.terminate();
 					dragMachine = null;
 					mouseDownAt = null;
 				}
 			}
 		}
-	
+
 		@Override
 		public void mouseDoubleClick(MouseEvent e) {
 			// TODO Auto-generated method stub
-	
+
 		}
-	
+
 		@Override
 		public void mouseDown(MouseEvent e) {
-			mouseDownAt = new Point(e.x, e.y);
 			if (e.button == 1) {
-				if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
-				}
-				else {
-					selectAtMouseDownPosition();
-				}
+				mouseDownAt = new Point(e.x, e.y);
+				selectAtMouseDownPosition((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1);
 			}
 		}
-	
+
 		@Override
 		public void mouseUp(MouseEvent e) {
 			if (dragMachine != null) {
@@ -108,12 +105,20 @@ public class DiagramViewer extends Viewer {
 			}
 			mouseDownAt = null;
 		}
-	
-		private void selectAtMouseDownPosition() {
+
+		private void selectAtMouseDownPosition(boolean addToSelection) {
 			GridElement selectedElement = getElementAtPosition(mouseDownAt);
 			if (selectedElement != null) {
 				if (selector.isSelected(selectedElement)) {
-					selector.moveToLastPosInList(selectedElement);
+					if (addToSelection) {
+						selector.deselect(selectedElement);
+					}
+					else {
+						selector.moveToLastPosInList(selectedElement);
+					}
+				}
+				else if (addToSelection) {
+					selector.select(selectedElement);
 				}
 				else {
 					selector.selectOnly(selectedElement);
@@ -124,7 +129,7 @@ public class DiagramViewer extends Viewer {
 			}
 			canvas.redraw();
 		}
-	
+
 		private GridElement getElementAtPosition(final Point position) {
 			GridElement selectedElement = null;
 			for (GridElement ge : diagram.getGridElementsByLayer(false)) { // get elements, highest layer first
@@ -151,21 +156,21 @@ public class DiagramViewer extends Viewer {
 	private class DiagramElementSelector extends Selector {
 		private final HasGridElements gridElementProvider;
 		private final List<GridElement> selectedElements = new ArrayList<GridElement>();
-	
+
 		public DiagramElementSelector(HasGridElements gridElementProvider) {
 			this.gridElementProvider = gridElementProvider;
 		}
-	
+
 		@Override
 		public List<GridElement> getSelectedElements() {
 			return selectedElements;
 		}
-	
+
 		@Override
 		public List<GridElement> getAllElements() {
 			return gridElementProvider.getGridElements();
 		}
-	
+
 		@Override
 		public void doAfterSelectionChanged() {
 			ArrayList<GridElement> elements = new ArrayList<GridElement>(getSelectedElements());
