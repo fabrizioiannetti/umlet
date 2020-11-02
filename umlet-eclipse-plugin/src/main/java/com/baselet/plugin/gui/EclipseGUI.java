@@ -2,11 +2,13 @@ package com.baselet.plugin.gui;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.swt.widgets.Display;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,32 +106,23 @@ public class EclipseGUI {
 		this.editor = editor;
 	}
 
-	public void panelDoAction(Pane pane, ActionName actionName) {
-		// TODO@fab used?
-		SWTOwnPropertyPane propertyPane = null;
-		if (pane == Pane.PROPERTY) {
-			propertyPane = editor.getPropertyPane();
-		}
-		// else if (pane == Pane.CUSTOMCODE) {
-		// textpane = editor.getCustomPane();
-		// }
+	private static Map<ActionName, Integer> actionNameToTextOperation;
+	{
+		actionNameToTextOperation = new HashMap<Contributor.ActionName, Integer>();
+		actionNameToTextOperation.put(ActionName.COPY, ITextOperationTarget.COPY);
+		actionNameToTextOperation.put(ActionName.CUT, ITextOperationTarget.CUT);
+		actionNameToTextOperation.put(ActionName.PASTE, ITextOperationTarget.PASTE);
+		actionNameToTextOperation.put(ActionName.SELECTALL, ITextOperationTarget.SELECT_ALL);
+	}
 
-		if (propertyPane != null) {
-			switch (actionName) {
-				case COPY:
-					propertyPane.doCopy();
-					break;
-				case CUT:
-					propertyPane.doCut();
-					break;
-				case PASTE:
-					propertyPane.doPaste();
-					break;
-				case SELECTALL:
-					propertyPane.doSelectAll();
-					break;
-				default:
-					break;
+	public void panelDoAction(Pane pane, ActionName actionName) {
+		if (pane == Pane.PROPERTY) {
+			ITextOperationTarget propertyPane = editor.getPropertyPane();
+			Integer textOperation = actionNameToTextOperation.get(actionName);
+			if (textOperation != null) {
+				if (propertyPane.canDoOperation(textOperation)) {
+					propertyPane.doOperation(textOperation);
+				}
 			}
 		}
 	}

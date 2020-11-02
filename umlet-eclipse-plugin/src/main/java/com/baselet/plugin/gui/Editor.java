@@ -10,11 +10,11 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.ITextListener;
+import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextEvent;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.FocusAdapter;
@@ -66,8 +66,6 @@ public class Editor extends EditorPart {
 	}
 
 	private TextViewer propertiesTextViewer;
-
-	private SWTOwnPropertyPane swtOwnPropertyPane;
 
 	private final Diagram diagram = new SWTDiagramHandler();
 
@@ -155,9 +153,6 @@ public class Editor extends EditorPart {
 		@Override
 		public void focusGained(FocusEvent e) {
 			EclipseGUI.get().setPaneFocused(pane);
-			if (pane == Pane.DIAGRAM && viewer != null) {
-				viewer.setSelection(new StructuredSelection());
-			}
 		}
 	}
 
@@ -180,13 +175,7 @@ public class Editor extends EditorPart {
 		paletteViewer = new DiagramViewer(sidebarForm);
 		propertiesTextViewer = new TextViewer(sidebarForm, SWT.V_SCROLL | SWT.H_SCROLL);
 		propertiesTextViewer.setInput(new Document("TODO: properties"));
-		swtOwnPropertyPane = new SWTOwnPropertyPane(propertiesTextViewer);
-		propertiesTextViewer.addTextListener(new ITextListener() {
-			@Override
-			public void textChanged(TextEvent event) {
-				swtOwnPropertyPane.updateGridElement();
-			}
-		});
+
 		diagramViewer.setInput(diagram);
 		File paletteFile = MainPlugin.getDefault().getPaletteFile("UML Common Elements");
 		setCurrentPalette(paletteFile, false);
@@ -269,8 +258,8 @@ public class Editor extends EditorPart {
 		log.info("Call editor.dispose( )" + uuid.toString());
 	}
 
-	public SWTOwnPropertyPane getPropertyPane() {
-		return swtOwnPropertyPane;
+	public ITextOperationTarget getPropertyPane() {
+		return propertiesTextViewer;
 	}
 
 	public void dirtyChanged() {
