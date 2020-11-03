@@ -1,10 +1,7 @@
 package com.baselet.plugin.gui;
 
-import java.util.Collection;
-
 import com.baselet.diagram.DiagramHandler;
 import com.baselet.diagram.DrawPanel;
-import com.baselet.element.interfaces.GridElement;
 import com.baselet.gui.CurrentGui;
 
 public class EclipseGUI {
@@ -30,10 +27,16 @@ public class EclipseGUI {
 		EclipseGUI.contributor = contributor;
 	}
 
-	public void elementsSelected(Collection<GridElement> selectedElements) {
+	public static void elementsSelected(boolean selected) {
 		// TODO@fab used?
 		if (contributor != null) {
-			contributor.setElementsSelected(selectedElements);
+			contributor.setElementsSelected(selected);
+		}
+	}
+
+	public static void setPasteAvailable(boolean available) {
+		if (contributor != null) {
+			contributor.setPaste(available);
 		}
 	}
 }

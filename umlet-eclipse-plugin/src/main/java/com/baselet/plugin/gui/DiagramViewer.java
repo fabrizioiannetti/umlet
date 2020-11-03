@@ -95,10 +95,18 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void mouseDown(MouseEvent e) {
+			Point point = new Point(e.x, e.y);
 			canvas.setFocus();
 			if (e.button == 1) {
-				mouseDownAt = new Point(e.x, e.y);
+				mouseDownAt = point;
 				selectAtMouseDownPosition((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1);
+			}
+			else if (e.button == 3) {
+				GridElement selectedElement = getElementAtPosition(point);
+				if (selectedElement != null && !selector.isSelected(selectedElement)) {
+					selector.selectOnly(selectedElement);
+					canvas.redraw();
+				}
 			}
 		}
 
@@ -409,23 +417,30 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	public boolean canDoOperation(int operation) {
 		switch (operation) {
 			case IOperationTarget.COPY:
+			case IOperationTarget.DELETE:
 			case IOperationTarget.PASTE:
+			case IOperationTarget.SELECT_ALL:
 				return true;
 			default:
 				break;
 		}
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public void doOperation(int operation) {
 		switch (operation) {
+			case IOperationTarget.DELETE:
+				controller.executeCommand(new Delete());
+				break;
 			case IOperationTarget.COPY:
 				SWTClipBoard.copyElements(selector.getSelectedElements());
 				break;
 			case IOperationTarget.PASTE:
 				controller.executeCommand(new Paste());
+				break;
+			case IOperationTarget.SELECT_ALL:
+				selector.select(diagram.getGridElements());
 				break;
 			default:
 				break;
@@ -434,7 +449,6 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	}
 
 	public class Paste extends Command {
-
 		private final List<GridElement> elements = new ArrayList<GridElement>();
 
 		public Paste() {
@@ -458,9 +472,18 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		@Override
 		public void undo() {
 			// TODO Auto-generated method stub
-
 		}
-
 	}
 
+	public class Delete extends Command {
+		@Override
+		public void execute() {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void undo() {
+			// TODO Auto-generated method stub
+		}
+	}
 }

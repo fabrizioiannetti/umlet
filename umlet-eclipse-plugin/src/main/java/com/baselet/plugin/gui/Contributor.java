@@ -1,6 +1,5 @@
 package com.baselet.plugin.gui;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +12,6 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.text.ITextOperationTarget;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchActionConstants;
@@ -22,14 +20,13 @@ import org.eclipse.ui.part.EditorActionBarContributor;
 
 import com.baselet.control.constants.MenuConstants;
 import com.baselet.control.enums.Program;
-import com.baselet.element.interfaces.GridElement;
 import com.baselet.plugin.gui.EclipseGUI.Pane;
 import com.baselet.plugin.gui.Editor.IPaneListener;
 
 public class Contributor extends EditorActionBarContributor implements IPaneListener {
 
 	public enum ActionName {
-		COPY, CUT, PASTE, SELECTALL
+		COPY, CUT, PASTE, SELECTALL, DELETE
 	}
 
 	private static Map<ActionName, Integer> actionNameToTextOperation;
@@ -39,6 +36,7 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		actionNameToTextOperation.put(ActionName.CUT, ITextOperationTarget.CUT);
 		actionNameToTextOperation.put(ActionName.PASTE, ITextOperationTarget.PASTE);
 		actionNameToTextOperation.put(ActionName.SELECTALL, ITextOperationTarget.SELECT_ALL);
+		actionNameToTextOperation.put(ActionName.DELETE, ITextOperationTarget.DELETE);
 	}
 
 	private final MenuFactoryEclipse menuFactory = MenuFactoryEclipse.getInstance();
@@ -48,14 +46,14 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 	private IAction undoActionGlobal;
 	private IAction redoActionGlobal;
 	private IAction printActionGlobal;
-	private IAction cutActionDiagram;
-	private IAction pasteActionDiagram;
-	private IAction deleteActionDiagram;
 	private IAction searchActionDiagram;
-	private IAction copyActionPropPanel;
-	private IAction cutActionPropPanel;
-	private IAction pasteActionPropPanel;
-	private IAction selectAllActionPropPanel;
+
+	// actions to execute on a pane
+	private IAction copyAction;
+	private IAction cutAction;
+	private IAction pasteAction;
+	private IAction selectAllAction;
+	private Action deleteAction;
 
 	private List<IAction> exportAsActionList;
 
@@ -66,38 +64,12 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 
 	private Editor targetEditor;
 
-	private Action copyActionDiagPanel;
-
-	private Action cutActionDiagPanel;
-
-	private Action pasteActionDiagPanel;
-
-	private Action selectAllActionDiagPanel;
-
 	public Contributor() {
 		customPanelEnabled = false;
 		custom_element_selected = false;
 	}
 
-	private Action createPanelAction(final ActionName action) {
-		Action propertyAction = new Action() {
-			@Override
-			public void run() {
-				if (targetEditor != null) {
-					ITextOperationTarget propertyPane = targetEditor.getPropertyPane();
-					Integer textOperation = actionNameToTextOperation.get(action);
-					if (textOperation != null) {
-						if (propertyPane.canDoOperation(textOperation)) {
-							propertyPane.doOperation(textOperation);
-						}
-					}
-				}
-			}
-		};
-		return propertyAction;
-	}
-
-	private Action createDiagramAction(final ActionName action) {
+	private Action createOperationTargetAction(final ActionName action) {
 		Action propertyAction = new Action() {
 			@Override
 			public void run() {
@@ -127,25 +99,20 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		redoActionGlobal = menuFactory.createRedo();
 		printActionGlobal = menuFactory.createPrint();
 
-		cutActionDiagram = menuFactory.createCut();
-		cutActionDiagram.setEnabled(false);
-		pasteActionDiagram = menuFactory.createPaste();
-		pasteActionDiagram.setEnabled(false);
-		deleteActionDiagram = menuFactory.createDelete();
-		deleteActionDiagram.setEnabled(false);
 		searchActionDiagram = menuFactory.createSearch();
 		menuFactory.createCopy();
 		menuFactory.createSelectAll();
 
-		copyActionPropPanel = createPanelAction(ActionName.COPY);
-		cutActionPropPanel = createPanelAction(ActionName.CUT);
-		pasteActionPropPanel = createPanelAction(ActionName.PASTE);
-		selectAllActionPropPanel = createPanelAction(ActionName.SELECTALL);
+		copyAction = createOperationTargetAction(ActionName.COPY);
+		cutAction = createOperationTargetAction(ActionName.CUT);
+		pasteAction = createOperationTargetAction(ActionName.PASTE);
+		selectAllAction = createOperationTargetAction(ActionName.SELECTALL);
 
-		copyActionDiagPanel = createDiagramAction(ActionName.COPY);
-		cutActionDiagPanel = createDiagramAction(ActionName.CUT);
-		pasteActionDiagPanel = createDiagramAction(ActionName.PASTE);
-		selectAllActionDiagPanel = createDiagramAction(ActionName.SELECTALL);
+		deleteAction = createOperationTargetAction(ActionName.DELETE);
+		deleteAction.setEnabled(false);
+		copyAction.setEnabled(false);
+		cutAction.setEnabled(false);
+		pasteAction.setEnabled(false);
 
 		setGlobalActionHandlers(Pane.DIAGRAM);
 	}
@@ -202,7 +169,7 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 	}
 
 	public void setPaste(boolean value) {
-		pasteActionDiagram.setEnabled(value);
+		pasteAction.setEnabled(value);
 	}
 
 	public void setCustomElementSelected(boolean selected) {
@@ -210,15 +177,10 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		customedit.setEnabled(selected && !customPanelEnabled);
 	}
 
-	public void setElementsSelected(Collection<GridElement> selectedElements) {
-		if (selectedElements.isEmpty()) {
-			deleteActionDiagram.setEnabled(false);
-			cutActionDiagram.setEnabled(false);
-		}
-		else {
-			cutActionDiagram.setEnabled(true);
-			deleteActionDiagram.setEnabled(true);
-		}
+	public void setElementsSelected(boolean selected) {
+		deleteAction.setEnabled(selected);
+		copyAction.setEnabled(selected);
+		cutAction.setEnabled(selected);
 	}
 
 	public boolean isCustomPanelEnabled() {
@@ -239,33 +201,14 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		getActionBars().setGlobalActionHandler(ActionFactory.REDO.getId(), redoActionGlobal);
 		getActionBars().setGlobalActionHandler(ActionFactory.PRINT.getId(), printActionGlobal);
 
-		// Specific actions depending on the active pane}
-		if (focusedPane == Pane.DIAGRAM) {
-			getActionBars().setGlobalActionHandler(ActionFactory.COPY.getId(), copyActionDiagPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.CUT.getId(), cutActionDiagPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.PASTE.getId(), pasteActionDiagPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.DELETE.getId(), null);
-			getActionBars().setGlobalActionHandler(ActionFactory.SELECT_ALL.getId(), selectAllActionDiagPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.FIND.getId(), null);
-		}
-		else if (focusedPane == Pane.CUSTOMCODE) {
-			// TODO@fab unsupported for now
-		}
-		else if (focusedPane == Pane.PROPERTY) {
-			getActionBars().setGlobalActionHandler(ActionFactory.COPY.getId(), copyActionPropPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.CUT.getId(), cutActionPropPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.PASTE.getId(), pasteActionPropPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.DELETE.getId(), null);
-			getActionBars().setGlobalActionHandler(ActionFactory.SELECT_ALL.getId(), selectAllActionPropPanel);
-			getActionBars().setGlobalActionHandler(ActionFactory.FIND.getId(), null);
-		}
+		getActionBars().setGlobalActionHandler(ActionFactory.COPY.getId(), copyAction);
+		getActionBars().setGlobalActionHandler(ActionFactory.CUT.getId(), cutAction);
+		getActionBars().setGlobalActionHandler(ActionFactory.PASTE.getId(), pasteAction);
+		getActionBars().setGlobalActionHandler(ActionFactory.DELETE.getId(), deleteAction);
+		getActionBars().setGlobalActionHandler(ActionFactory.SELECT_ALL.getId(), selectAllAction);
+		getActionBars().setGlobalActionHandler(ActionFactory.FIND.getId(), null);
 
-		Display.getDefault().asyncExec(new Runnable() {
-			@Override
-			public void run() {
-				getActionBars().updateActionBars();
-			}
-		});
+		getActionBars().updateActionBars();
 	}
 
 	public void updateZoomMenuRadioButton(int newGridSize) {

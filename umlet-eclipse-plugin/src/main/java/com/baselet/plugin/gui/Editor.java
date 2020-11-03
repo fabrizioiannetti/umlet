@@ -46,6 +46,18 @@ import com.baselet.plugin.swt.SWTElementFactory;
 
 public class Editor extends EditorPart {
 
+	private final class OperationTargetToTextBridge implements IOperationTarget {
+		@Override
+		public void doOperation(int operation) {
+			propertiesTextViewer.doOperation(operation);
+		}
+
+		@Override
+		public boolean canDoOperation(int operation) {
+			return propertiesTextViewer.canDoOperation(operation);
+		}
+	}
+
 	public interface IPaneListener {
 		public void paneSelected(Pane paneType);
 	}
@@ -89,6 +101,10 @@ public class Editor extends EditorPart {
 	private IWorkbenchAction selectAllAction;
 
 	private IPaneListener paneListener;
+
+	private IWorkbenchAction deleteAction;
+
+	private OperationTargetToTextBridge targetToTextBridge;
 
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
@@ -135,6 +151,7 @@ public class Editor extends EditorPart {
 				GridElement e = (GridElement) array[array.length - 1];
 				propertiesTextViewer.getDocument().set(e.getPanelAttributes());
 			}
+			EclipseGUI.elementsSelected(array.length > 0);
 		}
 
 		public DiagramSelectionToAttributesBinding bidirectional() {
@@ -166,14 +183,11 @@ public class Editor extends EditorPart {
 
 		@Override
 		public void focusGained(FocusEvent e) {
-			if (viewer != null) {
-				System.out.println("Editor.PaneTypeOnFocus.PaneTypeOnFocus() pane=" + paneType + " viewer=" + (viewer == paletteViewer ? "paletteviewer" : "diagramViewer"));
-			}
-			else {
-				System.out.println("Editor.PaneTypeOnFocus.PaneTypeOnFocus() pane=" + paneType);
-			}
 			if (paneListener != null) {
 				paneListener.paneSelected(paneType);
+				if (viewer != null) {
+					EclipseGUI.elementsSelected(viewer.getSelection().isEmpty());
+				}
 			}
 		}
 	}
@@ -195,6 +209,7 @@ public class Editor extends EditorPart {
 		paletteViewer = new DiagramViewer(sidebarForm);
 		propertiesTextViewer = new TextViewer(sidebarForm, SWT.V_SCROLL | SWT.H_SCROLL);
 		propertiesTextViewer.setInput(new Document("TODO: properties"));
+		targetToTextBridge = new OperationTargetToTextBridge();
 
 		diagramViewer.setInput(diagram);
 		File paletteFile = MainPlugin.getDefault().getPaletteFile("UML Common Elements");
@@ -225,6 +240,7 @@ public class Editor extends EditorPart {
 		propertiesTextViewer.getControl().setMenu(menu);
 
 		MenuManager diagramMM = new MenuManager();
+		diagramMM.add(deleteAction);
 		diagramMM.add(copyAction);
 		diagramMM.add(cutAction);
 		diagramMM.add(pasteAction);
@@ -244,6 +260,7 @@ public class Editor extends EditorPart {
 	}
 
 	private void createActions() {
+		deleteAction = ActionFactory.DELETE.create(getSite().getWorkbenchWindow());
 		copyAction = ActionFactory.COPY.create(getSite().getWorkbenchWindow());
 		cutAction = ActionFactory.CUT.create(getSite().getWorkbenchWindow());
 		pasteAction = ActionFactory.PASTE.create(getSite().getWorkbenchWindow());
@@ -349,6 +366,9 @@ public class Editor extends EditorPart {
 	public IOperationTarget getOperationTarget() {
 		if (paletteViewer.getControl().isFocusControl()) {
 			return paletteViewer;
+		}
+		else if (propertiesTextViewer.getControl().isFocusControl()) {
+			return targetToTextBridge;
 		}
 		return diagramViewer;
 	}
