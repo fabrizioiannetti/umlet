@@ -30,6 +30,7 @@ import org.eclipse.swt.widgets.Tracker;
 import com.baselet.command.Command;
 import com.baselet.command.Controller;
 import com.baselet.control.basics.geom.Point;
+import com.baselet.control.constants.Constants;
 import com.baselet.control.enums.Direction;
 import com.baselet.element.Selector;
 import com.baselet.element.interfaces.GridElement;
@@ -37,12 +38,15 @@ import com.baselet.element.interfaces.HasGridElements;
 import com.baselet.element.sticking.StickableMap;
 import com.baselet.plugin.command.Macro;
 import com.baselet.plugin.command.Move;
+import com.baselet.plugin.swt.SWTClipBoard;
 import com.baselet.plugin.swt.SWTComponent;
 import com.baselet.plugin.swt.SWTDiagramHandler;
+import com.baselet.plugin.swt.SWTElementFactory;
 
-public class DiagramViewer extends Viewer {
+public class DiagramViewer extends Viewer implements IOperationTarget {
 
 	private static final Color DEFAULT_BACKGROUND = new Color(255, 255, 255);
+	private static final SWTElementFactory ELEMENT_FACTORY = new SWTElementFactory();
 	private final Canvas canvas;
 	private SWTDiagramHandler diagram;
 	private Selector selector;
@@ -91,6 +95,7 @@ public class DiagramViewer extends Viewer {
 
 		@Override
 		public void mouseDown(MouseEvent e) {
+			canvas.setFocus();
 			if (e.button == 1) {
 				mouseDownAt = new Point(e.x, e.y);
 				selectAtMouseDownPosition((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1);
@@ -200,8 +205,7 @@ public class DiagramViewer extends Viewer {
 				e.gc.fillRectangle(e.x, e.y, e.width, e.height);
 				List<GridElement> gridElements = diagram.getGridElements();
 				for (GridElement gridElement : gridElements) {
-					com.baselet.element.interfaces.Component component = gridElement.getComponent();
-					SWTComponent swtComp = (SWTComponent) component;
+					SWTComponent swtComp = (SWTComponent) gridElement.getComponent();
 					swtComp.drawOn(e.gc, selector.isSelected(gridElement), 1d);
 				}
 			}
@@ -400,4 +404,63 @@ public class DiagramViewer extends Viewer {
 			super.executeCommand(command);
 		}
 	}
+
+	@Override
+	public boolean canDoOperation(int operation) {
+		switch (operation) {
+			case IOperationTarget.COPY:
+			case IOperationTarget.PASTE:
+				return true;
+			default:
+				break;
+		}
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void doOperation(int operation) {
+		switch (operation) {
+			case IOperationTarget.COPY:
+				SWTClipBoard.copyElements(selector.getSelectedElements());
+				break;
+			case IOperationTarget.PASTE:
+				controller.executeCommand(new Paste());
+				break;
+			default:
+				break;
+		}
+		canvas.redraw();
+	}
+
+	public class Paste extends Command {
+
+		private final List<GridElement> elements = new ArrayList<GridElement>();
+
+		public Paste() {
+			SWTClipBoard.pasteElements(elements, diagram);
+			Selector.replaceGroupsWithNewGroups(elements, selector);
+			com.baselet.control.basics.geom.Rectangle boundingBox = diagram.getBoundingBox(0, elements);
+			int xOffset = -boundingBox.x + Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+			int yOffset = -boundingBox.y + Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+			for (GridElement element : elements) {
+				element.setLocationDifference(xOffset, yOffset);
+			}
+		}
+
+		@Override
+		public void execute() {
+			for (GridElement gridElement : elements) {
+				diagram.getGridElements().add(ELEMENT_FACTORY.create(gridElement, diagram));
+			}
+		}
+
+		@Override
+		public void undo() {
+			// TODO Auto-generated method stub
+
+		}
+
+	}
+
 }

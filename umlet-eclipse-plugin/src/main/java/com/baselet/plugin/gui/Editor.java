@@ -29,6 +29,7 @@ import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.actions.ActionFactory;
+import org.eclipse.ui.actions.ActionFactory.IWorkbenchAction;
 import org.eclipse.ui.part.EditorPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,10 @@ import com.baselet.plugin.swt.SWTDiagramHandler;
 import com.baselet.plugin.swt.SWTElementFactory;
 
 public class Editor extends EditorPart {
+
+	public interface IPaneListener {
+		public void paneSelected(Pane paneType);
+	}
 
 	private static final Logger log = LoggerFactory.getLogger(Editor.class);
 
@@ -74,6 +79,16 @@ public class Editor extends EditorPart {
 	private DiagramViewer paletteViewer;
 
 	private DiagramViewer diagramViewer;
+
+	private IWorkbenchAction copyAction;
+
+	private IWorkbenchAction cutAction;
+
+	private IWorkbenchAction pasteAction;
+
+	private IWorkbenchAction selectAllAction;
+
+	private IPaneListener paneListener;
 
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
@@ -137,29 +152,34 @@ public class Editor extends EditorPart {
 	}
 
 	private class PaneTypeOnFocus extends FocusAdapter {
-		private final Pane pane;
+		private final Pane paneType;
 		private final DiagramViewer viewer;
 
-		public PaneTypeOnFocus(Pane pane) {
-			this(pane, null);
+		public PaneTypeOnFocus(Pane paneType) {
+			this(paneType, null);
 		}
 
-		public PaneTypeOnFocus(Pane pane, DiagramViewer viewer) {
-			super();
-			this.pane = pane;
+		public PaneTypeOnFocus(Pane paneType, DiagramViewer viewer) {
+			this.paneType = paneType;
 			this.viewer = viewer;
 		}
 
 		@Override
 		public void focusGained(FocusEvent e) {
-			EclipseGUI.get().setPaneFocused(pane);
+			if (viewer != null) {
+				System.out.println("Editor.PaneTypeOnFocus.PaneTypeOnFocus() pane=" + paneType + " viewer=" + (viewer == paletteViewer ? "paletteviewer" : "diagramViewer"));
+			}
+			else {
+				System.out.println("Editor.PaneTypeOnFocus.PaneTypeOnFocus() pane=" + paneType);
+			}
+			if (paneListener != null) {
+				paneListener.paneSelected(paneType);
+			}
 		}
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
-		EclipseGUI.get().setCurrentEditor(Editor.this); // must be done before initialization of DiagramHandler (eg: to set propertypanel text)
-
 		log.info("Call editor.createPartControl() " + uuid.toString());
 
 		// create the three panels (to be decided if they should be moved to views...)
@@ -182,8 +202,8 @@ public class Editor extends EditorPart {
 
 		// set the pane type on focus events
 		propertiesTextViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.PROPERTY));
-		paletteViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, diagramViewer));
-		diagramViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, paletteViewer));
+		paletteViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, paletteViewer));
+		diagramViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, diagramViewer));
 
 		// mark diagrams as exclusive (only one can have selected elements)
 		diagramViewer.setExclusiveTo(paletteViewer);
@@ -193,32 +213,56 @@ public class Editor extends EditorPart {
 		diagramViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding().bidirectional());
 		paletteViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding());
 
+		createActions();
+
 		// context menus
 		MenuManager propertiesMM = new MenuManager();
-		propertiesMM.add(ActionFactory.COPY.create(getSite().getWorkbenchWindow()));
-		propertiesMM.add(ActionFactory.CUT.create(getSite().getWorkbenchWindow()));
-		propertiesMM.add(ActionFactory.PASTE.create(getSite().getWorkbenchWindow()));
-		propertiesMM.add(ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow()));
+		propertiesMM.add(copyAction);
+		propertiesMM.add(cutAction);
+		propertiesMM.add(pasteAction);
+		propertiesMM.add(selectAllAction);
 		Menu menu = propertiesMM.createContextMenu(propertiesTextViewer.getControl());
 		propertiesTextViewer.getControl().setMenu(menu);
 
 		MenuManager diagramMM = new MenuManager();
-		diagramMM.add(ActionFactory.COPY.create(getSite().getWorkbenchWindow()));
-		diagramMM.add(ActionFactory.CUT.create(getSite().getWorkbenchWindow()));
-		diagramMM.add(ActionFactory.PASTE.create(getSite().getWorkbenchWindow()));
-		diagramMM.add(ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow()));
+		diagramMM.add(copyAction);
+		diagramMM.add(cutAction);
+		diagramMM.add(pasteAction);
+		diagramMM.add(selectAllAction);
 		menu = diagramMM.createContextMenu(diagramViewer.getControl());
 		diagramViewer.getControl().setMenu(menu);
 
 		MenuManager paletteMM = new MenuManager();
-		paletteMM.add(ActionFactory.COPY.create(getSite().getWorkbenchWindow()));
-		paletteMM.add(ActionFactory.CUT.create(getSite().getWorkbenchWindow()));
-		paletteMM.add(ActionFactory.PASTE.create(getSite().getWorkbenchWindow()));
-		paletteMM.add(ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow()));
+		paletteMM.add(copyAction);
+		paletteMM.add(cutAction);
+		paletteMM.add(pasteAction);
+		paletteMM.add(selectAllAction);
 		paletteMM.add(new Separator());
 		paletteMM.add(createPalettesListSubmenu());
 		menu = paletteMM.createContextMenu(paletteViewer.getControl());
 		paletteViewer.getControl().setMenu(menu);
+	}
+
+	private void createActions() {
+		copyAction = ActionFactory.COPY.create(getSite().getWorkbenchWindow());
+		cutAction = ActionFactory.CUT.create(getSite().getWorkbenchWindow());
+		pasteAction = ActionFactory.PASTE.create(getSite().getWorkbenchWindow());
+		selectAllAction = ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow());
+	}
+
+	private void disposeActions() {
+		if (copyAction != null) {
+			copyAction.dispose();
+		}
+		if (cutAction != null) {
+			cutAction.dispose();
+		}
+		if (pasteAction != null) {
+			pasteAction.dispose();
+		}
+		if (selectAllAction != null) {
+			selectAllAction.dispose();
+		}
 	}
 
 	private MenuManager createPalettesListSubmenu() {
@@ -249,13 +293,27 @@ public class Editor extends EditorPart {
 	@Override
 	public void setFocus() {
 		log.info("Call editor.setFocus() " + uuid.toString());
-		EclipseGUI.get().setCurrentEditor(this);
+		diagramViewer.getControl().setFocus();
+
 	}
 
 	@Override
 	public void dispose() {
 		super.dispose();
+		disposeActions();
 		log.info("Call editor.dispose( )" + uuid.toString());
+	}
+
+	void addPaneListener(IPaneListener listener) {
+		// TODO@fab only one for now
+		paneListener = listener;
+	}
+
+	void removePaneListener(IPaneListener listener) {
+		// TODO@fab only one for now
+		if (listener == paneListener) {
+			paneListener = null;
+		}
 	}
 
 	public ITextOperationTarget getPropertyPane() {
@@ -286,5 +344,12 @@ public class Editor extends EditorPart {
 
 	public void focusPropertyPane() {
 		propertiesTextViewer.getControl().setFocus();
+	}
+
+	public IOperationTarget getOperationTarget() {
+		if (paletteViewer.getControl().isFocusControl()) {
+			return paletteViewer;
+		}
+		return diagramViewer;
 	}
 }

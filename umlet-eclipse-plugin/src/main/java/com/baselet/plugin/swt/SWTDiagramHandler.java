@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import com.baselet.control.basics.geom.Rectangle;
 import com.baselet.control.config.SharedConfig;
 import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.GridElement;
@@ -120,5 +121,21 @@ public class SWTDiagramHandler implements Diagram {
 	@Override
 	public List<AutocompletionText> getAutocompletionList() {
 		return Collections.<AutocompletionText> emptyList();
+	}
+
+	public Rectangle getBoundingBox(int margin) {
+		return getBoundingBox(margin, gridElements);
+	}
+
+	public Rectangle getBoundingBox(int margin, List<GridElement> elements) {
+		if (elements.isEmpty()) {
+			return new Rectangle(0, 0, 0, 0);
+		}
+		Rectangle boundingBox = elements.get(0).getRectangle().copy();
+		for (GridElement gridElement : elements) {
+			boundingBox.merge(gridElement.getRectangle());
+		}
+		boundingBox.addBorder(margin);
+		return boundingBox;
 	}
 }
