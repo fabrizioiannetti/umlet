@@ -3,6 +3,7 @@ package com.baselet.plugin.gui;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 
 import org.eclipse.jface.viewers.ISelection;
@@ -42,6 +43,7 @@ import com.baselet.plugin.command.Macro;
 import com.baselet.plugin.command.Move;
 import com.baselet.plugin.swt.SWTClipBoard;
 import com.baselet.plugin.swt.SWTComponent;
+import com.baselet.plugin.swt.SWTConverter;
 import com.baselet.plugin.swt.SWTDiagramHandler;
 import com.baselet.plugin.swt.SWTElementFactory;
 
@@ -59,6 +61,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private final class MouseHandler implements MouseListener, MouseMoveListener, MouseWheelListener, KeyListener {
 		private Point mouseDownAt;
 		private IDragMachine dragMachine;
+		private Set<Direction> resizeDirections = Collections.emptySet();
 
 		@Override
 		public void mouseScrolled(MouseEvent e) {
@@ -67,6 +70,17 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void mouseMove(MouseEvent e) {
+			if (mouseDownAt == null) {
+				Point point = new Point(e.x, e.y);
+				GridElement onElement = getElementAtPosition(point);
+				if (onElement != null) {
+					resizeDirections = onElement.getResizeArea(e.x - onElement.getRectangle().x, e.y - onElement.getRectangle().y);
+					canvas.setCursor(SWTConverter.cursor(onElement.getCursor(point, resizeDirections)));
+				}
+				else {
+					canvas.setCursor(getControl().getDisplay().getSystemCursor(SWT.CURSOR_ARROW));
+				}
+			}
 			if (dragMachine == null &&
 				mouseDownAt != null &&
 				Math.min(Math.abs(e.x - mouseDownAt.x), Math.abs(e.x - mouseDownAt.y)) > gridSize) {
@@ -537,7 +551,6 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				elements.add(ELEMENT_FACTORY.create(element, diagram));
 			}
 			Selector.replaceGroupsWithNewGroups(elements, selector);
-			com.baselet.control.basics.geom.Rectangle boundingBox = diagram.getBoundingBox(0, elements);
 			int xOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
 			int yOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
 			for (GridElement element : elements) {
