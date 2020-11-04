@@ -18,7 +18,7 @@ Currently supported (bar any bug):
 * palette selection via popup menu
 * selection: single, multiple, all, lasso
 * copy/cut/paste, duplicate (also from palette) by double click
-* move/resize by maouse and arrow keys
+* move/resize by mouse and arrow keys
 
 To do:
 
