@@ -398,7 +398,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			Point snapPos = snapToGrid(newPos);
 			Point off = new Point(snapPos.x - oldPoint.x, snapPos.y - oldPoint.y);
 			if (off.x != 0 || off.y != 0) {
-				dragElements(off);
+				controller.executeCommand(dragElements(off));
 				oldPoint = snapPos;
 				firstDrag = false;
 				return true; // moved
@@ -406,12 +406,18 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			return false;
 		}
 
-		private void dragElements(Point off) {
-			Vector<Command> moveCommands = new Vector<Command>();
-			for (GridElement e : elementsToDrag) {
-				moveCommands.add(new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, true, stickablesMap.get(e)));
+		private Command dragElements(Point off) {
+			if (elementsToDrag.size() == 1) {
+				GridElement e = elementsToDrag.get(0);
+				return new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, false, stickablesMap.get(e));
 			}
-			controller.executeCommand(new Macro(moveCommands));
+			else {
+				Vector<Command> moveCommands = new Vector<Command>();
+				for (GridElement e : elementsToDrag) {
+					moveCommands.add(new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, true, stickablesMap.get(e)));
+				}
+				return new Macro(moveCommands);
+			}
 		}
 
 		@Override
