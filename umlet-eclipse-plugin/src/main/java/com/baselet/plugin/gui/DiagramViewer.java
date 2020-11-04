@@ -71,6 +71,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		@Override
 		public void mouseMove(MouseEvent e) {
 			if (mouseDownAt == null) {
+				// plain mouse move
 				Point point = new Point(e.x, e.y);
 				GridElement onElement = getElementAtPosition(point);
 				if (onElement != null) {
@@ -78,17 +79,24 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					canvas.setCursor(SWTConverter.cursor(onElement.getCursor(point, resizeDirections)));
 				}
 				else {
+					resizeDirections = Collections.emptySet();
 					canvas.setCursor(getControl().getDisplay().getSystemCursor(SWT.CURSOR_ARROW));
 				}
 			}
-			if (dragMachine == null &&
-				mouseDownAt != null &&
-				Math.min(Math.abs(e.x - mouseDownAt.x), Math.abs(e.x - mouseDownAt.y)) > gridSize) {
-				if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
-					dragMachine = new LassoMachine(mouseDownAt);
-				}
-				else {
-					dragMachine = new DragMachine(mouseDownAt);
+			else {
+				// mouse drag
+				if (dragMachine == null && Math.max(Math.abs(e.x - mouseDownAt.x), Math.abs(e.x - mouseDownAt.y)) >= gridSize) {
+					if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+						dragMachine = new LassoMachine(mouseDownAt);
+					}
+					else if (resizeDirections.isEmpty()) {
+						dragMachine = new DragMachine(mouseDownAt);
+					}
+					else {
+						GridElement onElement = getElementAtPosition(mouseDownAt);
+						selector.selectOnly(onElement);
+						dragMachine = new ResizeMachine(mouseDownAt, resizeDirections, (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2);
+					}
 				}
 			}
 			if (dragMachine != null) {
@@ -389,10 +397,51 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			controller.executeCommand(new Macro(moveCommands));
 		}
 
-		private Point snapToGrid(Point point) {
-			int halfX = point.x > 0 ? gridSize / 2 : -gridSize / 2;
-			int halfY = point.y > 0 ? gridSize / 2 : -gridSize / 2;
-			return new Point((point.x + halfX) / gridSize * gridSize, (point.y + halfY) / gridSize * gridSize);
+		@Override
+		public boolean isDone() {
+			return false;
+		}
+	}
+
+	private class ResizeMachine implements IDragMachine {
+		private Point oldPoint;
+		private final List<GridElement> elementsToResize;
+		boolean firstDrag;
+		private final Set<Direction> resizeDirections;
+		private final boolean keepProportions;
+
+		public ResizeMachine(Point startPoint, Set<Direction> resizeDirections, boolean keepProportions) {
+			this.resizeDirections = resizeDirections;
+			this.keepProportions = keepProportions;
+			oldPoint = snapToGrid(startPoint);
+			List<GridElement> selectedElements = selector.getSelectedElements();
+			elementsToResize = new ArrayList<GridElement>(selectedElements);
+			firstDrag = true;
+		}
+
+		@Override
+		public void terminate() {
+		}
+
+		@Override
+		public boolean dragTo(final Point newPos) {
+			Point snapPos = snapToGrid(newPos);
+			Point off = new Point(snapPos.x - oldPoint.x, snapPos.y - oldPoint.y);
+			if (off.x != 0 || off.y != 0) {
+				dragElements(off);
+				oldPoint = snapPos;
+				firstDrag = false;
+				return true; // moved
+			}
+			return false;
+		}
+
+		private void dragElements(Point off) {
+			Vector<Command> moveCommands = new Vector<Command>();
+			for (GridElement e : elementsToResize) {
+				moveCommands.add(new Move(resizeDirections, e, off.x, off.y, oldPoint, keepProportions, firstDrag, false, StickableMap.EMPTY_MAP));
+			}
+			controller.executeCommand(new Macro(moveCommands));
 		}
 
 		@Override
@@ -463,6 +512,12 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		public void executeCommand(Command command) {
 			super.executeCommand(command);
 		}
+	}
+
+	private Point snapToGrid(Point point) {
+		int halfX = point.x > 0 ? gridSize / 2 : -gridSize / 2;
+		int halfY = point.y > 0 ? gridSize / 2 : -gridSize / 2;
+		return new Point((point.x + halfX) / gridSize * gridSize, (point.y + halfY) / gridSize * gridSize);
 	}
 
 	@Override
