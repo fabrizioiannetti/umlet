@@ -57,6 +57,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private DiagramViewer exclusiveTo;
 	private final CommandInvoker controller = new CommandInvoker();
 	private final int gridSize = 10;
+	private DiagramViewer editableDiagram;
 
 	private final class MouseHandler implements MouseListener, MouseMoveListener, MouseWheelListener, KeyListener {
 		private Point mouseDownAt;
@@ -114,7 +115,12 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		@Override
 		public void mouseDoubleClick(MouseEvent e) {
 			if (!selector.getSelectedElements().isEmpty()) {
-				controller.executeCommand(new Duplicate());
+				if (editableDiagram != null) {
+					editableDiagram.addElements(selector.getSelectedElements());
+				}
+				else {
+					controller.executeCommand(new Duplicate());
+				}
 			}
 		}
 
@@ -344,6 +350,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		exclusiveTo = other;
 	}
 
+	public void setPaletteFor(DiagramViewer editableDiagram) {
+		this.editableDiagram = editableDiagram;
+	}
+
 	private interface IDragMachine {
 
 		boolean dragTo(final Point newPos);
@@ -555,6 +565,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		canvas.redraw();
 	}
 
+	private void addElements(List<GridElement> sourceElements) {
+		controller.executeCommand(new Duplicate(sourceElements, true));
+	}
+
 	public class Paste extends Command {
 		private final List<GridElement> elements = new ArrayList<GridElement>();
 
@@ -602,14 +616,23 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		private final List<GridElement> elements = new ArrayList<GridElement>();
 
 		public Duplicate() {
-			for (GridElement element : selector.getSelectedElements()) {
+			this(selector.getSelectedElements(), false);
+		}
+
+		public Duplicate(List<GridElement> sourceElements, boolean moveToOrigin) {
+			for (GridElement element : sourceElements) {
 				elements.add(ELEMENT_FACTORY.create(element, diagram));
 			}
 			Selector.replaceGroupsWithNewGroups(elements, selector);
 			int xOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
 			int yOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
 			for (GridElement element : elements) {
-				element.setLocationDifference(xOffset, yOffset);
+				if (moveToOrigin) {
+					element.setLocation(xOffset, yOffset);
+				}
+				else {
+					element.setLocationDifference(xOffset, yOffset);
+				}
 			}
 		}
 
@@ -618,6 +641,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			for (GridElement gridElement : elements) {
 				diagram.getGridElements().add(ELEMENT_FACTORY.create(gridElement, diagram));
 			}
+			canvas.redraw();
 		}
 
 		@Override

@@ -214,6 +214,7 @@ public class Editor extends EditorPart {
 		diagramViewer.setInput(diagram);
 		File paletteFile = MainPlugin.getDefault().getPaletteFile("UML Common Elements");
 		setCurrentPalette(paletteFile, false);
+		paletteViewer.setPaletteFor(diagramViewer);
 
 		// set the pane type on focus events
 		propertiesTextViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.PROPERTY));
