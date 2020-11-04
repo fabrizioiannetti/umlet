@@ -41,12 +41,9 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 
 	private final MenuFactoryEclipse menuFactory = MenuFactoryEclipse.getInstance();
 
-	private IAction customnew;
-	private IAction customedit;
 	private IAction undoActionGlobal;
 	private IAction redoActionGlobal;
 	private IAction printActionGlobal;
-	private IAction searchActionDiagram;
 
 	// actions to execute on a pane
 	private IAction copyAction;
@@ -57,17 +54,9 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 
 	private List<IAction> exportAsActionList;
 
-	private boolean customPanelEnabled;
-	private boolean custom_element_selected;
-
 	private IMenuManager zoomMenu;
 
 	private Editor targetEditor;
-
-	public Contributor() {
-		customPanelEnabled = false;
-		custom_element_selected = false;
-	}
 
 	private Action createOperationTargetAction(final ActionName action) {
 		Action propertyAction = new Action() {
@@ -92,29 +81,25 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 	public void init(IActionBars actionBars) {
 		super.init(actionBars);
 
-		customedit = menuFactory.createEditSelected();
-		customedit.setEnabled(false);
-
 		undoActionGlobal = menuFactory.createUndo();
 		redoActionGlobal = menuFactory.createRedo();
 		printActionGlobal = menuFactory.createPrint();
 
-		searchActionDiagram = menuFactory.createSearch();
 		menuFactory.createCopy();
 		menuFactory.createSelectAll();
 
+		deleteAction = createOperationTargetAction(ActionName.DELETE);
 		copyAction = createOperationTargetAction(ActionName.COPY);
 		cutAction = createOperationTargetAction(ActionName.CUT);
 		pasteAction = createOperationTargetAction(ActionName.PASTE);
 		selectAllAction = createOperationTargetAction(ActionName.SELECTALL);
 
-		deleteAction = createOperationTargetAction(ActionName.DELETE);
 		deleteAction.setEnabled(false);
 		copyAction.setEnabled(false);
 		cutAction.setEnabled(false);
 		pasteAction.setEnabled(false);
 
-		setGlobalActionHandlers(Pane.DIAGRAM);
+		setGlobalActionHandlers();
 	}
 
 	@Override
@@ -126,7 +111,6 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		IMenuManager help = new MenuManager(MenuConstants.HELP);
 		manager.appendToGroup(IWorkbenchActionConstants.MB_ADDITIONS, menu);
 
-		custom.add(customnew = menuFactory.createNewCustomElement());
 		custom.add(menuFactory.createNewCustomElementFromTemplate(this));
 		custom.add(new Separator());
 		custom.add(menuFactory.createCustomElementsTutorial());
@@ -172,29 +156,14 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		pasteAction.setEnabled(value);
 	}
 
-	public void setCustomElementSelected(boolean selected) {
-		custom_element_selected = selected;
-		customedit.setEnabled(selected && !customPanelEnabled);
-	}
-
 	public void setElementsSelected(boolean selected) {
+		System.out.println("Contributor.setElementsSelected() selected=" + selected);
 		deleteAction.setEnabled(selected);
 		copyAction.setEnabled(selected);
 		cutAction.setEnabled(selected);
 	}
 
-	public boolean isCustomPanelEnabled() {
-		return customPanelEnabled;
-	}
-
-	public void setCustomPanelEnabled(boolean enable) {
-		customPanelEnabled = enable;
-		customedit.setEnabled(!enable && custom_element_selected);
-		customnew.setEnabled(!enable);
-		searchActionDiagram.setEnabled(!enable);
-	}
-
-	public void setGlobalActionHandlers(Pane focusedPane) {
+	private void setGlobalActionHandlers() {
 
 		// Global actions which are always the same
 		getActionBars().setGlobalActionHandler(ActionFactory.UNDO.getId(), undoActionGlobal);
@@ -237,6 +206,6 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 
 	@Override
 	public void paneSelected(Pane paneType) {
-		setGlobalActionHandlers(paneType);
+		setGlobalActionHandlers();
 	}
 }
