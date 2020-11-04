@@ -227,7 +227,8 @@ public class MenuFactoryEclipse extends MenuFactory {
 			@Override
 			public void menuAboutToShow(IMenuManager manager) {
 				for (Action a : aList) {
-					a.setEnabled(!con.isCustomPanelEnabled());
+					// TODO@fab
+					// a.setEnabled(!con.isCustomPanelEnabled());
 				}
 			}
 		});

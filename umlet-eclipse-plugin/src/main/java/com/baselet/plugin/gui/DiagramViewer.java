@@ -13,6 +13,8 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.MouseMoveListener;
@@ -54,7 +56,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private final CommandInvoker controller = new CommandInvoker();
 	private final int gridSize = 10;
 
-	private final class MouseHandler implements MouseListener, MouseMoveListener, MouseWheelListener {
+	private final class MouseHandler implements MouseListener, MouseMoveListener, MouseWheelListener, KeyListener {
 		private Point mouseDownAt;
 		private IDragMachine dragMachine;
 
@@ -89,8 +91,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void mouseDoubleClick(MouseEvent e) {
-			// TODO Auto-generated method stub
-
+			if (!selector.getSelectedElements().isEmpty()) {
+				controller.executeCommand(new Duplicate());
+			}
 		}
 
 		@Override
@@ -164,6 +167,38 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			}
 			return selectedElement;
 		}
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+			int xOffset = 0;
+			int yOffset = 0;
+			switch (e.keyCode) {
+				case SWT.ARROW_DOWN:
+					yOffset = Constants.DEFAULTGRIDSIZE;
+					break;
+				case SWT.ARROW_UP:
+					yOffset = -Constants.DEFAULTGRIDSIZE;
+					break;
+				case SWT.ARROW_LEFT:
+					xOffset = -Constants.DEFAULTGRIDSIZE;
+					break;
+				case SWT.ARROW_RIGHT:
+					xOffset = Constants.DEFAULTGRIDSIZE;
+					break;
+			}
+			if (xOffset != 0 || yOffset != 0) {
+				DragMachine dm = new DragMachine(new Point(0, 0));
+				dm.dragTo(new Point(xOffset, yOffset));
+				dm.terminate();
+				canvas.redraw();
+			}
+		}
+
+		@Override
+		public void keyReleased(KeyEvent e) {
+			// TODO Auto-generated method stub
+
+		}
 	}
 
 	private class DiagramElementSelector extends Selector {
@@ -221,6 +256,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		MouseHandler listener = new MouseHandler();
 		canvas.addMouseListener(listener);
 		canvas.addMouseMoveListener(listener);
+		canvas.addKeyListener(listener);
 	}
 
 	@Override
@@ -340,7 +376,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		}
 
 		private Point snapToGrid(Point point) {
-			return new Point((point.x + gridSize / 2) / gridSize * gridSize, (point.y + gridSize / 2) / gridSize * gridSize);
+			int halfX = point.x > 0 ? gridSize / 2 : -gridSize / 2;
+			int halfY = point.y > 0 ? gridSize / 2 : -gridSize / 2;
+			return new Point((point.x + halfX) / gridSize * gridSize, (point.y + halfY) / gridSize * gridSize);
 		}
 
 		@Override
@@ -478,7 +516,40 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	public class Delete extends Command {
 		@Override
 		public void execute() {
+			List<GridElement> selectedElements = selector.getSelectedElements();
+			if (!selectedElements.isEmpty()) {
+				diagram.getGridElements().removeAll(selectedElements);
+				canvas.redraw();
+			}
+		}
+
+		@Override
+		public void undo() {
 			// TODO Auto-generated method stub
+		}
+	}
+
+	public class Duplicate extends Command {
+		private final List<GridElement> elements = new ArrayList<GridElement>();
+
+		public Duplicate() {
+			for (GridElement element : selector.getSelectedElements()) {
+				elements.add(ELEMENT_FACTORY.create(element, diagram));
+			}
+			Selector.replaceGroupsWithNewGroups(elements, selector);
+			com.baselet.control.basics.geom.Rectangle boundingBox = diagram.getBoundingBox(0, elements);
+			int xOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+			int yOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+			for (GridElement element : elements) {
+				element.setLocationDifference(xOffset, yOffset);
+			}
+		}
+
+		@Override
+		public void execute() {
+			for (GridElement gridElement : elements) {
+				diagram.getGridElements().add(ELEMENT_FACTORY.create(gridElement, diagram));
+			}
 		}
 
 		@Override
