@@ -157,7 +157,6 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 	}
 
 	public void setElementsSelected(boolean selected) {
-		System.out.println("Contributor.setElementsSelected() selected=" + selected);
 		deleteAction.setEnabled(selected);
 		copyAction.setEnabled(selected);
 		cutAction.setEnabled(selected);
