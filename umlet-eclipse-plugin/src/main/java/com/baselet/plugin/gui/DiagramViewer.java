@@ -2,7 +2,9 @@ package com.baselet.plugin.gui;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
@@ -367,6 +369,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private class DragMachine implements IDragMachine {
 		private Point oldPoint;
 		private List<GridElement> elementsToDrag;
+		private final Map<GridElement, StickableMap> stickablesMap = new HashMap<GridElement, StickableMap>();
 		boolean firstDrag;
 
 		public DragMachine(Point startPoint) {
@@ -378,6 +381,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			}
 			else {
 				elementsToDrag = new ArrayList<GridElement>(selectedElements);
+			}
+			for (GridElement gridElement : elementsToDrag) {
+				StickableMap stickables = diagram.getStickables(gridElement, elementsToDrag);
+				stickablesMap.put(gridElement, stickables);
 			}
 			firstDrag = true;
 		}
@@ -402,7 +409,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		private void dragElements(Point off) {
 			Vector<Command> moveCommands = new Vector<Command>();
 			for (GridElement e : elementsToDrag) {
-				moveCommands.add(new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, true, StickableMap.EMPTY_MAP));
+				moveCommands.add(new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, true, stickablesMap.get(e)));
 			}
 			controller.executeCommand(new Macro(moveCommands));
 		}
@@ -585,9 +592,13 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void execute() {
+			List<GridElement> newElements = new ArrayList<GridElement>();
 			for (GridElement gridElement : elements) {
-				diagram.getGridElements().add(ELEMENT_FACTORY.create(gridElement, diagram));
+				newElements.add(ELEMENT_FACTORY.create(gridElement, diagram));
 			}
+			diagram.getGridElements().addAll(newElements);
+			selector.selectOnly(newElements);
+			canvas.redraw();
 		}
 
 		@Override
@@ -638,9 +649,12 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void execute() {
+			List<GridElement> newElements = new ArrayList<GridElement>();
 			for (GridElement gridElement : elements) {
-				diagram.getGridElements().add(ELEMENT_FACTORY.create(gridElement, diagram));
+				newElements.add(ELEMENT_FACTORY.create(gridElement, diagram));
 			}
+			diagram.getGridElements().addAll(newElements);
+			selector.selectOnly(newElements);
 			canvas.redraw();
 		}
 
