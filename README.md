@@ -6,7 +6,30 @@ UMLet is an open-source UML tool with a simple user interface: draw UML diagrams
 
 * Go to http://www.umlet.com to get the latest compiled versions or to http://www.umletino.com to use UMLet in your web browser
 
-## SWT fork
+## About this fork (SWT Fork)
 
-This is a fork to experiment porting the GUI to SWT instead of embedding swing components.
-Swing could be used for offline rendering to an image and let SWT paint the image instead.
+This is a fork to experiment porting the GUI to SWT instead of embedding swing components
+to achieve a better eclipse integration.
+
+Currently supported (bar any bug):
+
+* Painting main diagram and palette
+* Attributes panel
+* palette selection via popup menu
+* selection: single, multiple, all, lasso
+* copy/cut/paste, duplicate (also from palette) by double click
+* move/resize by maouse and arrow keys
+
+To do:
+
+* undo/redo
+* dirty flag/save
+* grouping
+* export diagram
+* any subtle change...
+
+Not planned:
+
+* email panel
+* scrollbars in diagrams
+
