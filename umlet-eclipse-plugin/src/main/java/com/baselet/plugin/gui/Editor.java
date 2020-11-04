@@ -186,7 +186,7 @@ public class Editor extends EditorPart {
 			if (paneListener != null) {
 				paneListener.paneSelected(paneType);
 				if (viewer != null) {
-					EclipseGUI.elementsSelected(viewer.getSelection().isEmpty());
+					EclipseGUI.elementsSelected(!viewer.getSelection().isEmpty());
 				}
 			}
 		}
