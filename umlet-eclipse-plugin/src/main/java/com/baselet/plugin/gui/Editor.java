@@ -139,8 +139,7 @@ public class Editor extends EditorPart {
 
 	@Override
 	public boolean isDirty() {
-		// TODO@fab
-		return false;
+		return diagramViewer.isDiagramChanged();
 	}
 
 	private final class DiagramSelectionToAttributesBinding implements ISelectionChangedListener, ITextListener {
@@ -162,6 +161,7 @@ public class Editor extends EditorPart {
 				propertiesTextViewer.getDocument().set(e.getPanelAttributes());
 			}
 			EclipseGUI.elementsSelected(array.length > 0);
+			dirtyChanged();
 		}
 
 		public DiagramSelectionToAttributesBinding bidirectional() {
@@ -404,13 +404,8 @@ public class Editor extends EditorPart {
 		return propertiesTextViewer;
 	}
 
-	public void dirtyChanged() {
-		org.eclipse.swt.widgets.Display.getDefault().asyncExec(new Runnable() {
-			@Override
-			public void run() {
-				firePropertyChange(IEditorPart.PROP_DIRTY);
-			}
-		});
+	private void dirtyChanged() {
+		firePropertyChange(IEditorPart.PROP_DIRTY);
 	}
 
 	public void diagramNameChanged() {

@@ -59,11 +59,19 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private SWTDiagramHandler diagram;
 	private Selector selector;
 	private DiagramViewer exclusiveTo;
-	private final CommandInvoker controller = new CommandInvoker();
+	private DiagramController controller;
 	private final int gridSize = 10;
 	private DiagramViewer editableDiagram;
+	private final Runnable canvasRedraw = new Runnable() {
+		@Override
+		public void run() {
+			if (canvas != null && !canvas.isDisposed()) {
+				canvas.redraw();
+			}
+		}
+	};
 
-	private final class MouseHandler implements MouseListener, MouseMoveListener, MouseWheelListener, KeyListener {
+	private final class InputHandler implements MouseListener, MouseMoveListener, MouseWheelListener, KeyListener {
 		private Point mouseDownAt;
 		private IDragMachine dragMachine;
 		private Set<Direction> resizeDirections = Collections.emptySet();
@@ -113,6 +121,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					dragMachine = null;
 					mouseDownAt = null;
 					EclipseGUI.setUndoRedoAvailable(controller.isUndoable(), controller.isRedoable());
+					fireCurrentSelection();
 				}
 			}
 		}
@@ -124,7 +133,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					editableDiagram.doOperation(INSERT, selector.getSelectedElements(), null);
 				}
 				else {
-					doOperation(INSERT, selector.getSelectedElements(), null);
+					doOperation(DUPLICATE, null, null);
 				}
 			}
 		}
@@ -152,6 +161,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				dragMachine.terminate();
 				dragMachine = null;
 				EclipseGUI.setUndoRedoAvailable(controller.isUndoable(), controller.isRedoable());
+				fireCurrentSelection();
 			}
 			mouseDownAt = null;
 		}
@@ -262,7 +272,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				exclusiveTo.canvas.redraw();
 			}
 			// note: the last selected element is at end of the list
-			fireSelectionChanged(new SelectionChangedEvent(DiagramViewer.this, new StructuredSelection(elements)));
+			fireCurrentSelection();
 		}
 	}
 
@@ -287,7 +297,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				}
 			}
 		});
-		MouseHandler listener = new MouseHandler();
+		InputHandler listener = new InputHandler();
 		canvas.addMouseListener(listener);
 		canvas.addMouseMoveListener(listener);
 		canvas.addKeyListener(listener);
@@ -318,7 +328,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		if (input instanceof SWTDiagramHandler) {
 			diagram = (SWTDiagramHandler) input;
 			selector = new DiagramElementSelector(diagram);
-			controller.clear();
+			controller = new DiagramController(diagram, selector, canvasRedraw);
 		}
 	}
 
@@ -540,10 +550,180 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 	}
 
-	private class CommandInvoker extends Controller {
+	/**
+	 * Controller to apply modifications to the diagram.
+	 *
+	 * It extends the Baselet common undo/redo operations.
+	 */
+	private static class DiagramController extends Controller {
+		private final SWTDiagramHandler diagram;
+		private final Selector selector;
+		private final Runnable uiUpdater;
+
+		public DiagramController(SWTDiagramHandler diagram, Selector selector, Runnable uiUpdater) {
+			super();
+			this.diagram = diagram;
+			this.selector = selector;
+			this.uiUpdater = uiUpdater;
+		}
+
+		public class Paste extends Command {
+			private final List<GridElement> elements = new ArrayList<GridElement>();
+
+			public Paste() {
+				SWTClipBoard.pasteElements(elements, diagram);
+				Selector.replaceGroupsWithNewGroups(elements, selector);
+				com.baselet.control.basics.geom.Rectangle boundingBox = diagram.getBoundingBox(0, elements);
+				int xOffset = -boundingBox.x + Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+				int yOffset = -boundingBox.y + Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+				for (GridElement element : elements) {
+					element.setLocationDifference(xOffset, yOffset);
+				}
+			}
+
+			@Override
+			public void execute() {
+				diagram.getGridElements().addAll(elements);
+				selector.selectOnly(elements);
+				uiUpdater.run();
+			}
+
+			@Override
+			public void undo() {
+				diagram.getGridElements().removeAll(elements);
+			}
+		}
+
+		public class Delete extends Command {
+			private final List<GridElement> elements = new ArrayList<GridElement>();
+
+			@Override
+			public void execute() {
+				List<GridElement> selectedElements = selector.getSelectedElements();
+				if (!selectedElements.isEmpty()) {
+					diagram.getGridElements().removeAll(selectedElements);
+					uiUpdater.run();
+				}
+				elements.addAll(selectedElements);
+			}
+
+			@Override
+			public void undo() {
+				diagram.getGridElements().addAll(elements);
+			}
+		}
+
+		public class Duplicate extends Command {
+			private final List<GridElement> elements = new ArrayList<GridElement>();
+
+			public Duplicate() {
+				this(selector.getSelectedElements(), false);
+			}
+
+			public Duplicate(List<GridElement> sourceElements, boolean moveToOrigin) {
+				for (GridElement element : sourceElements) {
+					elements.add(ELEMENT_FACTORY.create(element, diagram));
+				}
+				Selector.replaceGroupsWithNewGroups(elements, selector);
+				int xOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+				int yOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
+				for (GridElement element : elements) {
+					if (moveToOrigin) {
+						element.setLocation(xOffset, yOffset);
+					}
+					else {
+						element.setLocationDifference(xOffset, yOffset);
+					}
+				}
+			}
+
+			@Override
+			public void execute() {
+				diagram.getGridElements().addAll(elements);
+				selector.selectOnly(elements);
+				uiUpdater.run();
+			}
+
+			@Override
+			public void undo() {
+				diagram.getGridElements().removeAll(elements);
+			}
+		}
+
+		public static class ChangeElementSettings extends Command {
+
+			private final String key;
+			private final Map<GridElement, String> elementValueMap;
+			private Map<GridElement, String> oldValue;
+
+			public ChangeElementSettings(String key, String value, Collection<GridElement> element) {
+				this(key, createSingleValueMap(value, element));
+			}
+
+			public ChangeElementSettings(String key, Map<GridElement, String> elementValueMap) {
+				this.key = key;
+				this.elementValueMap = elementValueMap;
+			}
+
+			@Override
+			public void execute() {
+				oldValue = new HashMap<GridElement, String>();
+
+				for (Entry<GridElement, String> entry : elementValueMap.entrySet()) {
+					GridElement e = entry.getKey();
+					oldValue.put(e, e.getSetting(key));
+					e.setProperty(key, entry.getValue());
+				}
+			}
+
+			@Override
+			public void undo() {
+				for (Entry<GridElement, String> entry : oldValue.entrySet()) {
+					entry.getKey().setProperty(key, entry.getValue());
+				}
+			}
+
+			private static Map<GridElement, String> createSingleValueMap(String value, Collection<GridElement> elements) {
+				Map<GridElement, String> singleValueMap = new HashMap<GridElement, String>(1);
+				for (GridElement e : elements) {
+					singleValueMap.put(e, value);
+				}
+				return singleValueMap;
+			}
+		}
+
+		// TODO@fab: needed only for drag (Move/Macro commands)
 		@Override
-		public void executeCommand(Command command) {
-			super.executeCommand(command);
+		public void executeCommand(Command newCommand) {
+			super.executeCommand(newCommand);
+		}
+
+		public void deleteSelected() {
+			executeCommand(new Delete());
+		}
+
+		public void copy() {
+			SWTClipBoard.copyElements(selector.getSelectedElements());
+		}
+
+		public void paste() {
+			executeCommand(new Paste());
+		}
+
+		public void duplicate() {
+			executeCommand(new Duplicate());
+		}
+
+		public void insert(List<GridElement> elements) {
+			executeCommand(new Duplicate(elements, true));
+		}
+
+		public void setFgColor(String colorName, Collection<GridElement> elements) {
+			executeCommand(new ChangeElementSettings("fg", colorName, elements));
+		}
+
+		public void setBgColor(String colorName, Collection<GridElement> elements) {
+			executeCommand(new ChangeElementSettings("bg", colorName, elements));
 		}
 	}
 
@@ -575,13 +755,13 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	public void doOperation(int operation, List<GridElement> elements, Object value) {
 		switch (operation) {
 			case IOperationTarget.DELETE:
-				controller.executeCommand(new Delete());
+				controller.deleteSelected();
 				break;
 			case IOperationTarget.COPY:
-				SWTClipBoard.copyElements(selector.getSelectedElements());
+				controller.copy();
 				break;
 			case IOperationTarget.PASTE:
-				controller.executeCommand(new Paste());
+				controller.paste();
 				break;
 			case IOperationTarget.SELECT_ALL:
 				selector.select(diagram.getGridElements());
@@ -593,153 +773,31 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				controller.redo();
 				break;
 			case IOperationTarget.DUPLICATE:
-				controller.executeCommand(new Duplicate());
+				controller.duplicate();
 				break;
 			case IOperationTarget.INSERT:
-				controller.executeCommand(new Duplicate(elements, true));
+				controller.insert(elements);
 				break;
 			case IOperationTarget.SET_FG_COLOR:
-				controller.executeCommand(new ChangeElementSettings("fg", value.toString(), elements));
+				controller.setFgColor(value.toString(), elements);
 				break;
 			case IOperationTarget.SET_BG_COLOR:
-				controller.executeCommand(new ChangeElementSettings("bg", value.toString(), elements));
+				controller.setBgColor(value.toString(), elements);
 				break;
 			default:
 				break;
 		}
 
 		canvas.redraw();
-		fireSelectionChanged(new SelectionChangedEvent(DiagramViewer.this, new StructuredSelection(selector.getSelectedElements())));
+		fireCurrentSelection();
 		EclipseGUI.setUndoRedoAvailable(controller.isUndoable(), controller.isRedoable());
 	}
 
-	public class Paste extends Command {
-		private final List<GridElement> elements = new ArrayList<GridElement>();
-
-		public Paste() {
-			SWTClipBoard.pasteElements(elements, diagram);
-			Selector.replaceGroupsWithNewGroups(elements, selector);
-			com.baselet.control.basics.geom.Rectangle boundingBox = diagram.getBoundingBox(0, elements);
-			int xOffset = -boundingBox.x + Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
-			int yOffset = -boundingBox.y + Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
-			for (GridElement element : elements) {
-				element.setLocationDifference(xOffset, yOffset);
-			}
-		}
-
-		@Override
-		public void execute() {
-			diagram.getGridElements().addAll(elements);
-			selector.selectOnly(elements);
-			canvas.redraw();
-		}
-
-		@Override
-		public void undo() {
-			diagram.getGridElements().removeAll(elements);
-		}
+	private void fireCurrentSelection() {
+		fireSelectionChanged(new SelectionChangedEvent(DiagramViewer.this, new StructuredSelection(selector.getSelectedElements())));
 	}
 
-	public class Delete extends Command {
-		private final List<GridElement> elements = new ArrayList<GridElement>();
-
-		@Override
-		public void execute() {
-			List<GridElement> selectedElements = selector.getSelectedElements();
-			if (!selectedElements.isEmpty()) {
-				diagram.getGridElements().removeAll(selectedElements);
-				canvas.redraw();
-			}
-			elements.addAll(selectedElements);
-		}
-
-		@Override
-		public void undo() {
-			diagram.getGridElements().addAll(elements);
-		}
-	}
-
-	public class Duplicate extends Command {
-		private final List<GridElement> elements = new ArrayList<GridElement>();
-
-		public Duplicate() {
-			this(selector.getSelectedElements(), false);
-		}
-
-		public Duplicate(List<GridElement> sourceElements, boolean moveToOrigin) {
-			for (GridElement element : sourceElements) {
-				elements.add(ELEMENT_FACTORY.create(element, diagram));
-			}
-			Selector.replaceGroupsWithNewGroups(elements, selector);
-			int xOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
-			int yOffset = Constants.PASTE_DISPLACEMENT_GRIDS * Constants.DEFAULTGRIDSIZE;
-			for (GridElement element : elements) {
-				if (moveToOrigin) {
-					element.setLocation(xOffset, yOffset);
-				}
-				else {
-					element.setLocationDifference(xOffset, yOffset);
-				}
-			}
-		}
-
-		@Override
-		public void execute() {
-			diagram.getGridElements().addAll(elements);
-			selector.selectOnly(elements);
-			canvas.redraw();
-		}
-
-		@Override
-		public void undo() {
-			diagram.getGridElements().removeAll(elements);
-		}
-	}
-
-	public static class ChangeElementSettings extends Command {
-
-		private final String key;
-		private final Map<GridElement, String> elementValueMap;
-		private Map<GridElement, String> oldValue;
-
-		public ChangeElementSettings(String key, String value, Collection<GridElement> element) {
-			this(key, createSingleValueMap(value, element));
-		}
-
-		public ChangeElementSettings(String key, Map<GridElement, String> elementValueMap) {
-			this.key = key;
-			this.elementValueMap = elementValueMap;
-		}
-
-		@Override
-		public void execute() {
-			oldValue = new HashMap<GridElement, String>();
-
-			for (Entry<GridElement, String> entry : elementValueMap.entrySet()) {
-				GridElement e = entry.getKey();
-				oldValue.put(e, e.getSetting(key));
-				e.setProperty(key, entry.getValue());
-				// if (handler.getDrawPanel().getSelector().isSelected(e)) {
-				// HandlerElementMap.getHandlerForElement(e).getDrawPanel().getSelector().updateSelectorInformation(); // update the property panel to display changed attributes
-				// }
-			}
-			// handler.getDrawPanel().repaint();
-		}
-
-		@Override
-		public void undo() {
-			for (Entry<GridElement, String> entry : oldValue.entrySet()) {
-				entry.getKey().setProperty(key, entry.getValue());
-			}
-			// handler.getDrawPanel().repaint();
-		}
-
-		private static Map<GridElement, String> createSingleValueMap(String value, Collection<GridElement> elements) {
-			Map<GridElement, String> singleValueMap = new HashMap<GridElement, String>(1);
-			for (GridElement e : elements) {
-				singleValueMap.put(e, value);
-			}
-			return singleValueMap;
-		}
+	public boolean isDiagramChanged() {
+		return controller.isUndoable();
 	}
 }

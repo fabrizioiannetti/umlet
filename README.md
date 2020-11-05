@@ -21,10 +21,11 @@ Currently supported (bar any bug):
 * move/resize by mouse and arrow keys
 * undo/redo
 * set fg/bg color via context menu
+* editor reports dirty state
 
 To do:
 
-* dirty flag/save
+* save/save as
 * export diagram
 * content assist in properties pane
 * grouping
