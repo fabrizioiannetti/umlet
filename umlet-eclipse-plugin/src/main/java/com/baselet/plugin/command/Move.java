@@ -8,7 +8,7 @@ import com.baselet.control.enums.Direction;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.sticking.StickableMap;
 
-public class Move extends CommandWithRedo {
+public class Move extends Command {
 
 	private final GridElement entity;
 	private final int x;
@@ -72,7 +72,6 @@ public class Move extends CommandWithRedo {
 		entity.updateModelFromText();
 	}
 
-	@Override
 	public void redo() {
 		entity.redoDrag();
 		entity.updateModelFromText();
