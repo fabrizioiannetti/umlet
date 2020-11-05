@@ -39,4 +39,10 @@ public class EclipseGUI {
 			contributor.setPaste(available);
 		}
 	}
+
+	public static void setUndoRedoAvailable(boolean undoAvailable, boolean redoAvailable) {
+		if (contributor != null) {
+			contributor.setUndoRedoAvailable(undoAvailable, redoAvailable);
+		}
+	}
 }

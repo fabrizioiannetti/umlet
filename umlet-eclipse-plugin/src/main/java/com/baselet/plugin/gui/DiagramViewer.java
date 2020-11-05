@@ -110,6 +110,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					dragMachine.terminate();
 					dragMachine = null;
 					mouseDownAt = null;
+					EclipseGUI.setUndoRedoAvailable(controller.isUndoable(), controller.isRedoable());
 				}
 			}
 		}
@@ -118,10 +119,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		public void mouseDoubleClick(MouseEvent e) {
 			if (!selector.getSelectedElements().isEmpty()) {
 				if (editableDiagram != null) {
-					editableDiagram.addElements(selector.getSelectedElements());
+					editableDiagram.doOperation(INSERT, selector.getSelectedElements());
 				}
 				else {
-					controller.executeCommand(new Duplicate());
+					doOperation(INSERT, selector.getSelectedElements());
 				}
 			}
 		}
@@ -148,6 +149,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			if (dragMachine != null) {
 				dragMachine.terminate();
 				dragMachine = null;
+				EclipseGUI.setUndoRedoAvailable(controller.isUndoable(), controller.isRedoable());
 			}
 			mouseDownAt = null;
 		}
@@ -391,6 +393,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void terminate() {
+			for (GridElement e : elementsToDrag) {
+				e.dragEnd();
+			}
 		}
 
 		@Override
@@ -444,6 +449,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void terminate() {
+			for (GridElement e : elementsToResize) {
+				e.dragEnd();
+			}
 		}
 
 		@Override
@@ -550,6 +558,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			case IOperationTarget.DELETE:
 			case IOperationTarget.PASTE:
 			case IOperationTarget.SELECT_ALL:
+			case IOperationTarget.UNDO:
+			case IOperationTarget.REDO:
+			case IOperationTarget.DUPLICATE:
+			case IOperationTarget.INSERT:
 				return true;
 			default:
 				break;
@@ -558,7 +570,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	}
 
 	@Override
-	public void doOperation(int operation) {
+	public void doOperation(int operation, List<GridElement> elements) {
 		switch (operation) {
 			case IOperationTarget.DELETE:
 				controller.executeCommand(new Delete());
@@ -572,14 +584,23 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			case IOperationTarget.SELECT_ALL:
 				selector.select(diagram.getGridElements());
 				break;
+			case IOperationTarget.UNDO:
+				controller.undo();
+				break;
+			case IOperationTarget.REDO:
+				controller.redo();
+				break;
+			case IOperationTarget.DUPLICATE:
+				controller.executeCommand(new Duplicate());
+				break;
+			case IOperationTarget.INSERT:
+				controller.executeCommand(new Duplicate(elements, true));
+				break;
 			default:
 				break;
 		}
 		canvas.redraw();
-	}
-
-	private void addElements(List<GridElement> sourceElements) {
-		controller.executeCommand(new Duplicate(sourceElements, true));
+		EclipseGUI.setUndoRedoAvailable(controller.isUndoable(), controller.isRedoable());
 	}
 
 	public class Paste extends Command {
@@ -598,22 +619,20 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void execute() {
-			List<GridElement> newElements = new ArrayList<GridElement>();
-			for (GridElement gridElement : elements) {
-				newElements.add(ELEMENT_FACTORY.create(gridElement, diagram));
-			}
-			diagram.getGridElements().addAll(newElements);
-			selector.selectOnly(newElements);
+			diagram.getGridElements().addAll(elements);
+			selector.selectOnly(elements);
 			canvas.redraw();
 		}
 
 		@Override
 		public void undo() {
-			// TODO Auto-generated method stub
+			diagram.getGridElements().removeAll(elements);
 		}
 	}
 
 	public class Delete extends Command {
+		private final List<GridElement> elements = new ArrayList<GridElement>();
+
 		@Override
 		public void execute() {
 			List<GridElement> selectedElements = selector.getSelectedElements();
@@ -621,11 +640,12 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				diagram.getGridElements().removeAll(selectedElements);
 				canvas.redraw();
 			}
+			elements.addAll(selectedElements);
 		}
 
 		@Override
 		public void undo() {
-			// TODO Auto-generated method stub
+			diagram.getGridElements().addAll(elements);
 		}
 	}
 
@@ -655,18 +675,14 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void execute() {
-			List<GridElement> newElements = new ArrayList<GridElement>();
-			for (GridElement gridElement : elements) {
-				newElements.add(ELEMENT_FACTORY.create(gridElement, diagram));
-			}
-			diagram.getGridElements().addAll(newElements);
-			selector.selectOnly(newElements);
+			diagram.getGridElements().addAll(elements);
+			selector.selectOnly(elements);
 			canvas.redraw();
 		}
 
 		@Override
 		public void undo() {
-			// TODO Auto-generated method stub
+			diagram.getGridElements().removeAll(elements);
 		}
 	}
 }

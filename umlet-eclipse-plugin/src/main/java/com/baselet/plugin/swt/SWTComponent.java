@@ -402,7 +402,7 @@ public class SWTComponent implements Component {
 
 	@Override
 	public com.baselet.control.basics.geom.Rectangle getBoundsRect() {
-		return rect;
+		return rect.copy();
 	}
 
 	@Override

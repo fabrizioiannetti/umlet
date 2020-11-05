@@ -11,7 +11,6 @@ import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
-import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchActionConstants;
@@ -26,17 +25,19 @@ import com.baselet.plugin.gui.Editor.IPaneListener;
 public class Contributor extends EditorActionBarContributor implements IPaneListener {
 
 	public enum ActionName {
-		COPY, CUT, PASTE, SELECTALL, DELETE
+		COPY, CUT, PASTE, SELECTALL, DELETE, UNDO, REDO
 	}
 
 	private static Map<ActionName, Integer> actionNameToTextOperation;
 	{
 		actionNameToTextOperation = new HashMap<Contributor.ActionName, Integer>();
-		actionNameToTextOperation.put(ActionName.COPY, ITextOperationTarget.COPY);
-		actionNameToTextOperation.put(ActionName.CUT, ITextOperationTarget.CUT);
-		actionNameToTextOperation.put(ActionName.PASTE, ITextOperationTarget.PASTE);
-		actionNameToTextOperation.put(ActionName.SELECTALL, ITextOperationTarget.SELECT_ALL);
-		actionNameToTextOperation.put(ActionName.DELETE, ITextOperationTarget.DELETE);
+		actionNameToTextOperation.put(ActionName.COPY, IOperationTarget.COPY);
+		actionNameToTextOperation.put(ActionName.CUT, IOperationTarget.CUT);
+		actionNameToTextOperation.put(ActionName.PASTE, IOperationTarget.PASTE);
+		actionNameToTextOperation.put(ActionName.SELECTALL, IOperationTarget.SELECT_ALL);
+		actionNameToTextOperation.put(ActionName.DELETE, IOperationTarget.DELETE);
+		actionNameToTextOperation.put(ActionName.UNDO, IOperationTarget.UNDO);
+		actionNameToTextOperation.put(ActionName.REDO, IOperationTarget.REDO);
 	}
 
 	private final MenuFactoryEclipse menuFactory = MenuFactoryEclipse.getInstance();
@@ -68,7 +69,7 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 					Integer textOperation = actionNameToTextOperation.get(action);
 					if (textOperation != null) {
 						if (target.canDoOperation(textOperation)) {
-							target.doOperation(textOperation);
+							target.doOperation(textOperation, null);
 						}
 					}
 				}
@@ -81,12 +82,9 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 	public void init(IActionBars actionBars) {
 		super.init(actionBars);
 
-		undoActionGlobal = menuFactory.createUndo();
-		redoActionGlobal = menuFactory.createRedo();
+		undoActionGlobal = createOperationTargetAction(ActionName.UNDO);
+		redoActionGlobal = createOperationTargetAction(ActionName.REDO);
 		printActionGlobal = menuFactory.createPrint();
-
-		menuFactory.createCopy();
-		menuFactory.createSelectAll();
 
 		deleteAction = createOperationTargetAction(ActionName.DELETE);
 		copyAction = createOperationTargetAction(ActionName.COPY);
@@ -94,6 +92,8 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		pasteAction = createOperationTargetAction(ActionName.PASTE);
 		selectAllAction = createOperationTargetAction(ActionName.SELECTALL);
 
+		undoActionGlobal.setEnabled(false);
+		redoActionGlobal.setEnabled(false);
 		deleteAction.setEnabled(false);
 		copyAction.setEnabled(false);
 		cutAction.setEnabled(false);
@@ -160,6 +160,11 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 		deleteAction.setEnabled(selected);
 		copyAction.setEnabled(selected);
 		cutAction.setEnabled(selected);
+	}
+
+	public void setUndoRedoAvailable(boolean undoAvailable, boolean redoAvailable) {
+		undoActionGlobal.setEnabled(undoAvailable);
+		redoActionGlobal.setEnabled(redoAvailable);
 	}
 
 	private void setGlobalActionHandlers() {

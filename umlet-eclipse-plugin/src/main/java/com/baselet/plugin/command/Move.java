@@ -5,11 +5,10 @@ import java.util.Collection;
 import com.baselet.command.Command;
 import com.baselet.control.basics.geom.Point;
 import com.baselet.control.enums.Direction;
-import com.baselet.diagram.CurrentDiagram;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.sticking.StickableMap;
 
-public class Move extends Command {
+public class Move extends CommandWithRedo {
 
 	private final GridElement entity;
 	private final int x;
@@ -21,6 +20,7 @@ public class Move extends Command {
 	private final Collection<Direction> resizeDirection;
 	private final double mouseX;
 	private final double mouseY;
+	private boolean isRedo;
 
 	public Move(Collection<Direction> resizeDirection, boolean absoluteMousePos, GridElement e, int x, int y, Point mousePosBeforeDrag, boolean isShiftKeyDown, boolean firstDrag, boolean useSetLocation, StickableMap stickingStickables) {
 		entity = e;
@@ -53,19 +53,29 @@ public class Move extends Command {
 
 	@Override
 	public void execute() {
+		if (isRedo) {
+			redo();
+			return;
+		}
 		if (useSetLocation) {
 			entity.setRectangleDifference(x, y, 0, 0, firstDrag, stickables, true);
 		}
 		else {
 			entity.drag(resizeDirection, x, y, getMousePosBeforeDrag(), isShiftKeyDown, firstDrag, stickables, true);
 		}
+		isRedo = true;
 	}
 
 	@Override
 	public void undo() {
 		entity.undoDrag();
 		entity.updateModelFromText();
-		CurrentDiagram.getInstance().getDiagramHandler().getDrawPanel().updatePanelAndScrollbars();
+	}
+
+	@Override
+	public void redo() {
+		entity.redoDrag();
+		entity.updateModelFromText();
 	}
 
 	@Override
@@ -86,6 +96,7 @@ public class Move extends Command {
 		Point mousePosBeforeDrag = firstDrag ? getMousePosBeforeDrag() : m.getMousePosBeforeDrag();
 		// Important: absoluteMousePos=false, because the mousePos is already relative from the first constructor call!
 		Move ret = new Move(m.resizeDirection, false, entity, x + m.y, y + m.y, mousePosBeforeDrag, isShiftKeyDown, firstDrag || m.firstDrag, useSetLocation, stickables);
+		ret.isRedo = isRedo;
 		entity.mergeUndoDrag();
 		return ret;
 	}

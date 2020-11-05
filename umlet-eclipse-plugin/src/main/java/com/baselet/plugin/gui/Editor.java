@@ -48,13 +48,13 @@ public class Editor extends EditorPart {
 
 	private final class OperationTargetToTextBridge implements IOperationTarget {
 		@Override
-		public void doOperation(int operation) {
-			propertiesTextViewer.doOperation(operation);
+		public boolean canDoOperation(int operation) {
+			return operation < IOperationTarget.DUPLICATE && propertiesTextViewer.canDoOperation(operation);
 		}
 
 		@Override
-		public boolean canDoOperation(int operation) {
-			return propertiesTextViewer.canDoOperation(operation);
+		public void doOperation(int operation, List<GridElement> elements) {
+			propertiesTextViewer.doOperation(operation);
 		}
 	}
 
@@ -92,17 +92,16 @@ public class Editor extends EditorPart {
 
 	private DiagramViewer diagramViewer;
 
+	// actions used in popup menus
 	private IWorkbenchAction copyAction;
-
 	private IWorkbenchAction cutAction;
-
 	private IWorkbenchAction pasteAction;
-
 	private IWorkbenchAction selectAllAction;
+	private IWorkbenchAction deleteAction;
+	private IWorkbenchAction undoAction;
+	private IWorkbenchAction redoAction;
 
 	private IPaneListener paneListener;
-
-	private IWorkbenchAction deleteAction;
 
 	private OperationTargetToTextBridge targetToTextBridge;
 
@@ -246,6 +245,8 @@ public class Editor extends EditorPart {
 		diagramMM.add(cutAction);
 		diagramMM.add(pasteAction);
 		diagramMM.add(selectAllAction);
+		diagramMM.add(undoAction);
+		diagramMM.add(redoAction);
 		menu = diagramMM.createContextMenu(diagramViewer.getControl());
 		diagramViewer.getControl().setMenu(menu);
 
@@ -266,6 +267,8 @@ public class Editor extends EditorPart {
 		cutAction = ActionFactory.CUT.create(getSite().getWorkbenchWindow());
 		pasteAction = ActionFactory.PASTE.create(getSite().getWorkbenchWindow());
 		selectAllAction = ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow());
+		undoAction = ActionFactory.UNDO.create(getSite().getWorkbenchWindow());
+		redoAction = ActionFactory.REDO.create(getSite().getWorkbenchWindow());
 	}
 
 	private void disposeActions() {

@@ -19,13 +19,16 @@ Currently supported (bar any bug):
 * selection: single, multiple, all, lasso
 * copy/cut/paste, duplicate (also from palette) by double click
 * move/resize by mouse and arrow keys
+* undo/redo
 
 To do:
 
-* undo/redo
 * dirty flag/save
-* grouping
 * export diagram
+* content assist in properties pane
+* grouping
+* zoom
+* custom elements
 * any subtle change...
 
 Not planned:
