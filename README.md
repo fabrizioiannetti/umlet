@@ -20,6 +20,7 @@ Currently supported (bar any bug):
 * copy/cut/paste, duplicate (also from palette) by double click
 * move/resize by mouse and arrow keys
 * undo/redo
+* set fg/bg color via context menu
 
 To do:
 
@@ -30,6 +31,10 @@ To do:
 * zoom
 * custom elements
 * any subtle change...
+
+known bugs:
+
+* lw > 1 not rendered correctly
 
 Not planned:
 
