@@ -1,11 +1,17 @@
 package com.baselet.plugin.gui;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IMenuListener;
+import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.text.Document;
@@ -14,6 +20,7 @@ import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextEvent;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
@@ -34,6 +41,8 @@ import org.eclipse.ui.part.EditorPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.baselet.diagram.draw.helper.theme.Theme.PredefinedColors;
+import com.baselet.diagram.draw.helper.theme.ThemeFactory;
 import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.old.custom.CustomElementHandler;
@@ -53,7 +62,7 @@ public class Editor extends EditorPart {
 		}
 
 		@Override
-		public void doOperation(int operation, List<GridElement> elements) {
+		public void doOperation(int operation, List<GridElement> elements, Object value) {
 			propertiesTextViewer.doOperation(operation);
 		}
 	}
@@ -100,6 +109,8 @@ public class Editor extends EditorPart {
 	private IWorkbenchAction deleteAction;
 	private IWorkbenchAction undoAction;
 	private IWorkbenchAction redoAction;
+	private final Map<String, Action> fgColorActions = new HashMap<String, Action>();
+	private final Map<String, Action> bgColorActions = new HashMap<String, Action>();
 
 	private IPaneListener paneListener;
 
@@ -240,15 +251,15 @@ public class Editor extends EditorPart {
 		propertiesTextViewer.getControl().setMenu(menu);
 
 		MenuManager diagramMM = new MenuManager();
-		diagramMM.add(deleteAction);
-		diagramMM.add(copyAction);
-		diagramMM.add(cutAction);
-		diagramMM.add(pasteAction);
-		diagramMM.add(selectAllAction);
-		diagramMM.add(undoAction);
-		diagramMM.add(redoAction);
 		menu = diagramMM.createContextMenu(diagramViewer.getControl());
 		diagramViewer.getControl().setMenu(menu);
+		diagramMM.setRemoveAllWhenShown(true);
+		diagramMM.addMenuListener(new IMenuListener() {
+			@Override
+			public void menuAboutToShow(IMenuManager manager) {
+				fillDiagramContextMenu(manager);
+			}
+		});
 
 		MenuManager paletteMM = new MenuManager();
 		paletteMM.add(copyAction);
@@ -261,6 +272,21 @@ public class Editor extends EditorPart {
 		paletteViewer.getControl().setMenu(menu);
 	}
 
+	private void fillDiagramContextMenu(IMenuManager diagramMM) {
+		diagramMM.add(deleteAction);
+		diagramMM.add(copyAction);
+		diagramMM.add(cutAction);
+		diagramMM.add(pasteAction);
+		diagramMM.add(selectAllAction);
+		diagramMM.add(undoAction);
+		diagramMM.add(redoAction);
+		diagramMM.add(new Separator());
+		if (!diagramViewer.getSelection().isEmpty()) {
+			diagramMM.add(createColorSubmenu(true));
+			diagramMM.add(createColorSubmenu(false));
+		}
+	}
+
 	private void createActions() {
 		deleteAction = ActionFactory.DELETE.create(getSite().getWorkbenchWindow());
 		copyAction = ActionFactory.COPY.create(getSite().getWorkbenchWindow());
@@ -269,6 +295,34 @@ public class Editor extends EditorPart {
 		selectAllAction = ActionFactory.SELECT_ALL.create(getSite().getWorkbenchWindow());
 		undoAction = ActionFactory.UNDO.create(getSite().getWorkbenchWindow());
 		redoAction = ActionFactory.REDO.create(getSite().getWorkbenchWindow());
+
+		for (PredefinedColors color : ThemeFactory.getCurrentTheme().getColorMap().keySet()) {
+			fgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase()) {
+				@Override
+				public void run() {
+					setColorOnSelection(getText(), true);
+				}
+			});
+			bgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase()) {
+				@Override
+				public void run() {
+					setColorOnSelection(getText(), false);
+				}
+			});
+		}
+	}
+
+	private void setColorOnSelection(String colorName, boolean fg) {
+		IStructuredSelection selection = (IStructuredSelection) diagramViewer.getSelection();
+		ArrayList<GridElement> selectedElements = new ArrayList<GridElement>();
+		for (Object object : selection) {
+			if (object instanceof GridElement) {
+				GridElement ge = (GridElement) object;
+				selectedElements.add(ge);
+			}
+		}
+		int operation = fg ? IOperationTarget.SET_FG_COLOR : IOperationTarget.SET_BG_COLOR;
+		diagramViewer.doOperation(operation, selectedElements, colorName);
 	}
 
 	private void disposeActions() {
@@ -284,6 +338,15 @@ public class Editor extends EditorPart {
 		if (selectAllAction != null) {
 			selectAllAction.dispose();
 		}
+	}
+
+	private MenuManager createColorSubmenu(boolean fg) {
+		MenuManager colorListMM = new MenuManager(fg ? "Foreground" : "Background");
+		Collection<Action> colorActions = fg ? fgColorActions.values() : bgColorActions.values();
+		for (Action setColorAction : colorActions) {
+			colorListMM.add(setColorAction);
+		}
+		return colorListMM;
 	}
 
 	private MenuManager createPalettesListSubmenu() {

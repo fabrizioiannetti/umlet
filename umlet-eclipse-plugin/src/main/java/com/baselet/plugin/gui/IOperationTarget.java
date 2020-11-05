@@ -16,6 +16,8 @@ public interface IOperationTarget {
 	static final int SELECT_ALL = ITextOperationTarget.SELECT_ALL;
 	static final int DUPLICATE = ITextOperationTarget.STRIP_PREFIX + 1;
 	static final int INSERT = ITextOperationTarget.STRIP_PREFIX + 2;
+	static final int SET_FG_COLOR = ITextOperationTarget.STRIP_PREFIX + 3;
+	static final int SET_BG_COLOR = ITextOperationTarget.STRIP_PREFIX + 4;
 
 	/**
 	 * Returns whether the operation specified by the given operation code
@@ -33,7 +35,8 @@ public interface IOperationTarget {
 	 *
 	 * @param operation the operation code
 	 * @param elements optional elements for the operation (INSERT only)
+	 * @param value optional argument for the operation (SET_FG/BG only)
 	 */
-	void doOperation(int operation, List<GridElement> elements);
+	void doOperation(int operation, List<GridElement> elements, Object value);
 
 }

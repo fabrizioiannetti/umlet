@@ -69,7 +69,7 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 					Integer textOperation = actionNameToTextOperation.get(action);
 					if (textOperation != null) {
 						if (target.canDoOperation(textOperation)) {
-							target.doOperation(textOperation, null);
+							target.doOperation(textOperation, null, null);
 						}
 					}
 				}
