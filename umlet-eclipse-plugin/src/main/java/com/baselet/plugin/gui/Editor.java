@@ -43,7 +43,6 @@ import org.slf4j.LoggerFactory;
 
 import com.baselet.diagram.draw.helper.theme.Theme.PredefinedColors;
 import com.baselet.diagram.draw.helper.theme.ThemeFactory;
-import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.old.custom.CustomElementHandler;
 import com.baselet.plugin.MainPlugin;
@@ -77,7 +76,17 @@ public class Editor extends EditorPart {
 
 	@Override
 	public void doSave(IProgressMonitor monitor) {
-		// TODO@fab
+		File file;
+		try {
+			diagramViewer.setSaved();
+			file = getFile(getEditorInput());
+			DiagramIO.writeToFile(diagram, diagramViewer.getGridSize(), file, diagram.getHelpText());
+
+		} catch (PartInitException e) {
+			// this should never happen as the exception would happen at init()
+			// TODO@fab save file in member instead?
+			e.printStackTrace();
+		}
 		monitor.done();
 	}
 
@@ -93,7 +102,7 @@ public class Editor extends EditorPart {
 
 	private TextViewer propertiesTextViewer;
 
-	private final Diagram diagram = new SWTDiagramHandler();
+	private final SWTDiagramHandler diagram = new SWTDiagramHandler();
 
 	private final IElementFactory factory = new SWTElementFactory();
 
@@ -122,7 +131,9 @@ public class Editor extends EditorPart {
 		setSite(site);
 		setInput(input);
 		setPartName(input.getName());
-		DiagramIO.readFromFile(getFile(input), diagram, factory);
+		StringBuilder helpText = new StringBuilder();
+		DiagramIO.readFromFile(getFile(input), diagram, factory, helpText);
+		diagram.setHelpText(helpText.toString());
 	}
 
 	private File getFile(IEditorInput input) throws PartInitException {
@@ -159,6 +170,9 @@ public class Editor extends EditorPart {
 				}
 				GridElement e = (GridElement) array[array.length - 1];
 				propertiesTextViewer.getDocument().set(e.getPanelAttributes());
+			}
+			else {
+				propertiesTextViewer.getDocument().set(diagram.getHelpText());
 			}
 			EclipseGUI.elementsSelected(array.length > 0);
 			dirtyChanged();
@@ -218,7 +232,7 @@ public class Editor extends EditorPart {
 		SashForm sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
 		paletteViewer = new DiagramViewer(sidebarForm);
 		propertiesTextViewer = new TextViewer(sidebarForm, SWT.V_SCROLL | SWT.H_SCROLL);
-		propertiesTextViewer.setInput(new Document("TODO: properties"));
+		propertiesTextViewer.setInput(new Document(diagram.getHelpText()));
 		targetToTextBridge = new OperationTargetToTextBridge();
 
 		diagramViewer.setInput(diagram);
@@ -367,7 +381,7 @@ public class Editor extends EditorPart {
 
 	private void setCurrentPalette(File paletteFile, boolean refreshViewer) {
 		SWTDiagramHandler paletteDiagram = new SWTDiagramHandler();
-		DiagramIO.readFromFile(paletteFile, paletteDiagram, factory);
+		DiagramIO.readFromFile(paletteFile, paletteDiagram, factory, null);
 		paletteViewer.setInput(paletteDiagram);
 		if (refreshViewer) {
 			paletteViewer.refresh();

@@ -8,6 +8,7 @@ import java.util.List;
 
 import com.baselet.control.basics.geom.Rectangle;
 import com.baselet.control.config.SharedConfig;
+import com.baselet.control.constants.Constants;
 import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.relation.Relation;
@@ -28,6 +29,8 @@ public class SWTDiagramHandler implements Diagram {
 	private final List<GridElement> gridElements;
 
 	private String helpText;
+
+	private String helptext;
 
 	public SWTDiagramHandler() {
 		this(null, new ArrayList<GridElement>());
@@ -137,5 +140,18 @@ public class SWTDiagramHandler implements Diagram {
 		}
 		boundingBox.addBorder(margin);
 		return boundingBox;
+	}
+
+	public void setHelpText(String helptext) {
+		this.helptext = helptext;
+	}
+
+	public String getHelpText() {
+		if (helptext == null) {
+			return Constants.getDefaultHelptext();
+		}
+		else {
+			return helptext;
+		}
 	}
 }

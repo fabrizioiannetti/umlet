@@ -35,7 +35,6 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Tracker;
 
 import com.baselet.command.Command;
-import com.baselet.command.Controller;
 import com.baselet.control.basics.geom.Point;
 import com.baselet.control.constants.Constants;
 import com.baselet.control.enums.Direction;
@@ -265,7 +264,6 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void doAfterSelectionChanged() {
-			ArrayList<GridElement> elements = new ArrayList<GridElement>(getSelectedElements());
 			// deselect elements from associated exclusive viewer
 			if (exclusiveTo != null) {
 				exclusiveTo.selector.deselectAllWithoutAfterAction();
@@ -371,13 +369,11 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	}
 
 	private interface IDragMachine {
-
 		boolean dragTo(final Point newPos);
 
 		void terminate();
 
 		boolean isDone();
-
 	}
 
 	private class DragMachine implements IDragMachine {
@@ -798,6 +794,15 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	}
 
 	public boolean isDiagramChanged() {
-		return controller.isUndoable();
+		return controller.isChanged();
+	}
+
+	public int getGridSize() {
+		return gridSize;
+	}
+
+	public void setSaved() {
+		controller.setChangeOrigin();
+		fireCurrentSelection();
 	}
 }

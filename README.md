@@ -22,10 +22,11 @@ Currently supported (bar any bug):
 * undo/redo
 * set fg/bg color via context menu
 * editor reports dirty state
+* save
 
 To do:
 
-* save/save as
+* save as
 * export diagram
 * content assist in properties pane
 * grouping
