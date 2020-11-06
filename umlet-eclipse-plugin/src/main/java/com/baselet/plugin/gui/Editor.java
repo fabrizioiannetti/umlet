@@ -208,7 +208,9 @@ public class Editor extends EditorPart {
 		@Override
 		public void selectionChanged(SelectionChangedEvent event) {
 			event.getSource();
-			Object[] array = event.getStructuredSelection().toArray();
+			// TODO@fab needs a newer target to build with tycho
+			// Object[] array = event.getStructuredSelection().toArray();
+			Object[] array = ((IStructuredSelection) event.getSelection()).toArray();
 			if (array.length > 0) {
 				if (syncBack) {
 					DiagramViewer newSource = (DiagramViewer) event.getSource();
