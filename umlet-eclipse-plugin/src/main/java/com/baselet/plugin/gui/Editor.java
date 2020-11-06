@@ -15,10 +15,20 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextListener;
 import org.eclipse.jface.text.ITextOperationTarget;
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.TextEvent;
-import org.eclipse.jface.text.TextViewer;
+import org.eclipse.jface.text.contentassist.ContentAssistant;
+import org.eclipse.jface.text.contentassist.IContentAssistant;
+import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.jface.text.source.SourceViewerConfiguration;
+import org.eclipse.jface.text.templates.Template;
+import org.eclipse.jface.text.templates.TemplateCompletionProcessor;
+import org.eclipse.jface.text.templates.TemplateContextType;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
@@ -26,6 +36,9 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.FocusAdapter;
 import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Menu;
@@ -41,10 +54,12 @@ import org.eclipse.ui.part.EditorPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.baselet.control.enums.ElementId;
 import com.baselet.diagram.draw.helper.theme.Theme.PredefinedColors;
 import com.baselet.diagram.draw.helper.theme.ThemeFactory;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.old.custom.CustomElementHandler;
+import com.baselet.gui.AutocompletionText;
 import com.baselet.plugin.MainPlugin;
 import com.baselet.plugin.gui.EclipseGUI.Pane;
 import com.baselet.plugin.swt.DiagramIO;
@@ -53,6 +68,37 @@ import com.baselet.plugin.swt.SWTDiagramHandler;
 import com.baselet.plugin.swt.SWTElementFactory;
 
 public class Editor extends EditorPart {
+
+	private final class PropertyCompletionProcessor extends TemplateCompletionProcessor {
+		private final List<Template> templates;
+
+		private PropertyCompletionProcessor(GridElement e) {
+			templates = new ArrayList<Template>();
+			if (e != null) {
+				for (AutocompletionText autocompletionText : e.getAutocompletionList()) {
+					String name = autocompletionText.getText();
+					String description = autocompletionText.getInfo();
+					String pattern = name;
+					templates.add(new Template(name, description, IDocument.DEFAULT_CONTENT_TYPE, pattern, true));
+				}
+			}
+		}
+
+		@Override
+		protected Template[] getTemplates(String contextTypeId) {
+			return templates.toArray(new Template[0]);
+		}
+
+		@Override
+		protected Image getImage(Template template) {
+			return null;
+		}
+
+		@Override
+		protected TemplateContextType getContextType(ITextViewer viewer, IRegion region) {
+			return new TemplateContextType(IDocument.DEFAULT_CONTENT_TYPE);
+		}
+	}
 
 	private final class OperationTargetToTextBridge implements IOperationTarget {
 		@Override
@@ -100,7 +146,7 @@ public class Editor extends EditorPart {
 		return true;
 	}
 
-	private TextViewer propertiesTextViewer;
+	private SourceViewer propertiesTextViewer;
 
 	private final SWTDiagramHandler diagram = new SWTDiagramHandler();
 
@@ -124,6 +170,8 @@ public class Editor extends EditorPart {
 	private IPaneListener paneListener;
 
 	private OperationTargetToTextBridge targetToTextBridge;
+
+	private final Map<ElementId, PropertyCompletionProcessor> contentAssistants = new HashMap<ElementId, PropertyCompletionProcessor>();
 
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
@@ -170,9 +218,11 @@ public class Editor extends EditorPart {
 				}
 				GridElement e = (GridElement) array[array.length - 1];
 				propertiesTextViewer.getDocument().set(e.getPanelAttributes());
+				updateContentAssistant(e);
 			}
 			else {
 				propertiesTextViewer.getDocument().set(diagram.getHelpText());
+				updateContentAssistant(null);
 			}
 			EclipseGUI.elementsSelected(array.length > 0);
 			dirtyChanged();
@@ -231,7 +281,7 @@ public class Editor extends EditorPart {
 		diagramViewer = new DiagramViewer(mainForm);
 		SashForm sidebarForm = new SashForm(mainForm, SWT.VERTICAL);
 		paletteViewer = new DiagramViewer(sidebarForm);
-		propertiesTextViewer = new TextViewer(sidebarForm, SWT.V_SCROLL | SWT.H_SCROLL);
+		propertiesTextViewer = new SourceViewer(sidebarForm, null, SWT.V_SCROLL | SWT.H_SCROLL);
 		propertiesTextViewer.setInput(new Document(diagram.getHelpText()));
 		targetToTextBridge = new OperationTargetToTextBridge();
 
@@ -252,6 +302,24 @@ public class Editor extends EditorPart {
 		// listen to selection changes in diagrams and update properties content
 		diagramViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding().bidirectional());
 		paletteViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding());
+
+		// install content assist on the properties viewer
+		updateContentAssistant(null);
+		propertiesTextViewer.getControl().addKeyListener(new KeyListener() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.keyCode == ' ' && (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+					if (propertiesTextViewer.canDoOperation(ISourceViewer.CONTENTASSIST_PROPOSALS)) {
+						propertiesTextViewer.doOperation(ISourceViewer.CONTENTASSIST_PROPOSALS);
+						e.doit = false;
+					}
+				}
+			}
+		});
 
 		createActions();
 
@@ -284,6 +352,24 @@ public class Editor extends EditorPart {
 		paletteMM.add(createPalettesListSubmenu());
 		menu = paletteMM.createContextMenu(paletteViewer.getControl());
 		paletteViewer.getControl().setMenu(menu);
+	}
+
+	private void updateContentAssistant(final GridElement element) {
+		propertiesTextViewer.unconfigure();
+		if (element == null) {
+			return;
+		}
+		propertiesTextViewer.configure(new SourceViewerConfiguration() {
+			@Override
+			public IContentAssistant getContentAssistant(ISourceViewer sourceViewer) {
+				ContentAssistant contentAssist = new ContentAssistant();
+				if (!contentAssistants.containsKey(element.getId())) {
+					contentAssistants.put(element.getId(), new PropertyCompletionProcessor(element));
+				}
+				contentAssist.addContentAssistProcessor(contentAssistants.get(element.getId()), IDocument.DEFAULT_CONTENT_TYPE);
+				return contentAssist;
+			}
+		});
 	}
 
 	private void fillDiagramContextMenu(IMenuManager diagramMM) {

@@ -23,12 +23,12 @@ Currently supported (bar any bug):
 * set fg/bg color via context menu
 * editor reports dirty state
 * save
+* content assist in properties pane
 
 To do:
 
 * save as
 * export diagram
-* content assist in properties pane
 * grouping
 * zoom
 * custom elements
