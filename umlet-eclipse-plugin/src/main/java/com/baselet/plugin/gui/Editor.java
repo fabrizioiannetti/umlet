@@ -368,7 +368,7 @@ public class Editor extends EditorPart {
 				if (!contentAssistants.containsKey(element.getId())) {
 					contentAssistants.put(element.getId(), new PropertyCompletionProcessor(element));
 				}
-				contentAssist.addContentAssistProcessor(contentAssistants.get(element.getId()), IDocument.DEFAULT_CONTENT_TYPE);
+				contentAssist.setContentAssistProcessor(contentAssistants.get(element.getId()), IDocument.DEFAULT_CONTENT_TYPE);
 				return contentAssist;
 			}
 		});
@@ -417,7 +417,7 @@ public class Editor extends EditorPart {
 	private void setColorOnSelection(String colorName, boolean fg) {
 		IStructuredSelection selection = (IStructuredSelection) diagramViewer.getSelection();
 		ArrayList<GridElement> selectedElements = new ArrayList<GridElement>();
-		for (Object object : selection) {
+		for (Object object : selection.toArray()) {
 			if (object instanceof GridElement) {
 				GridElement ge = (GridElement) object;
 				selectedElements.add(ge);
