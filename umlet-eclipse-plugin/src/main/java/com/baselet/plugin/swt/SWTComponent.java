@@ -70,7 +70,7 @@ public class SWTComponent implements Component {
 		public abstract void run(Style style);
 	}
 
-	private final class DrawHandlerExtension extends DrawHandler {
+	private final class SWTDrawHandler extends DrawHandler {
 
 		@Override
 		protected void addDrawable(final DrawFunction drawable) {
@@ -228,8 +228,6 @@ public class SWTComponent implements Component {
 					// of the surrounding box as reference, while swing uses the font baseline/bottom
 					double x = point.x;
 					double y = point.y - drawer.textHeightMax();
-					// TODO@fabColorOwn fgColor = getOverlay().getForegroundColor() != null ? getOverlay().getForegroundColor() : styleAtDrawingCall.getForegroundColor();
-					// TODO@fab ctx.setFillStyle(Converter.convert(fgColor));
 					FontMetrics fontMetrics = supportGC.getFontMetrics();
 					final double ppi = 72;
 					final double dpi = supportGC.getDevice().getDPI().y;
@@ -263,36 +261,6 @@ public class SWTComponent implements Component {
 				}
 			});
 		}
-		// private void drawTextHelper(final StringStyle line, PointDouble p, AlignHorizontal align, double fontSize) {
-		//
-		// ctxSetFont(fontSize, line);
-		//
-		// String textToDraw = line.getStringWithoutMarkup();
-		// if (textToDraw == null || textToDraw.isEmpty()) {
-		// return; // if nothing should be drawn return (some browsers like Opera have problems with ctx.fillText calls on empty strings)
-		// }
-		//
-		// ctxSetTextAlign(align);
-		// ctx.fillText(textToDraw, p.x, p.y);
-		//
-		// if (line.getFormat().contains(FormatLabels.UNDERLINE)) {
-		// ctx.setLineWidth(1.0f);
-		// setLineDash(ctx, LineType.SOLID, 1.0f);
-		// double textWidth = textWidth(line);
-		// int vDist = 1;
-		// switch (align) {
-		// case LEFT:
-		// drawLineHelper(true, new PointDouble(p.x, p.y + vDist), new PointDouble(p.x + textWidth, p.y + vDist));
-		// break;
-		// case CENTER:
-		// drawLineHelper(true, new PointDouble(p.x - textWidth / 2, p.y + vDist), new PointDouble(p.x + textWidth / 2, p.y + vDist));
-		// break;
-		// case RIGHT:
-		// drawLineHelper(true, new PointDouble(p.x - textWidth, p.y + vDist), new PointDouble(p.x, p.y + vDist));
-		// break;
-		// }
-		// }
-		// }
 	}
 
 	private Image support;
@@ -308,8 +276,8 @@ public class SWTComponent implements Component {
 		support = new Image(getDevice(), 100, 100);
 		supportGC = new GC(support);
 		supportGC.setBackground(BACKGROUND_DEFAULT);
-		drawer = new DrawHandlerExtension();
-		metaDrawer = new DrawHandlerExtension();
+		drawer = new SWTDrawHandler();
+		metaDrawer = new SWTDrawHandler();
 		element = gridElement;
 	}
 
@@ -408,7 +376,8 @@ public class SWTComponent implements Component {
 
 	@Override
 	public void repaintComponent() {
-		// TODO@fab not necessary?
+		// components repaints itself if needed in drawOn()
+		// i.e. before painting itself on the canvas
 	}
 
 	@Override
