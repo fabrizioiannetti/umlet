@@ -32,6 +32,7 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tracker;
 
 import com.baselet.command.Command;
@@ -52,7 +53,7 @@ import com.baselet.plugin.swt.SWTElementFactory;
 
 public class DiagramViewer extends Viewer implements IOperationTarget {
 
-	private static final Color DEFAULT_BACKGROUND = new Color(255, 255, 255);
+	private static final Color DEFAULT_BACKGROUND = new Color(Display.getDefault(), 255, 255, 255);
 	private static final SWTElementFactory ELEMENT_FACTORY = new SWTElementFactory();
 	private final Canvas canvas;
 	private SWTDiagramHandler diagram;
@@ -286,7 +287,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		canvas.addPaintListener(new PaintListener() {
 			@Override
 			public void paintControl(PaintEvent e) {
-				e.gc.setBackground(new Color(new RGB(255, 255, 255)));
+				e.gc.setBackground(new Color(canvas.getDisplay(), new RGB(255, 255, 255)));
 				e.gc.fillRectangle(e.x, e.y, e.width, e.height);
 				List<GridElement> gridElements = diagram.getGridElements();
 				for (GridElement gridElement : gridElements) {

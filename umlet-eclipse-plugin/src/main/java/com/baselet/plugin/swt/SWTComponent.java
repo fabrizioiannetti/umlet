@@ -40,10 +40,10 @@ import com.baselet.element.interfaces.GridElement;
  */
 public class SWTComponent implements Component {
 
-	private static final Color BACKGROUND_DEFAULT = new Color(255, 255, 255, 0);
+	private static final Color BACKGROUND_DEFAULT = new Color(Display.getDefault(), 255, 255, 255, 0);
 
 	private static Color toSWTColor(ColorOwn ownColor) {
-		return new Color(ownColor.getRed(), ownColor.getGreen(), ownColor.getBlue(), ownColor.getAlpha());
+		return new Color(Display.getDefault(), ownColor.getRed(), ownColor.getGreen(), ownColor.getBlue(), ownColor.getAlpha());
 	}
 
 	private static void updateGCWithStyle(GC gc, Style style) {
@@ -314,7 +314,7 @@ public class SWTComponent implements Component {
 			ColorOwn bgOwnColor = ThemeFactory.getCurrentTheme().getColor(Theme.ColorStyle.DEFAULT_BACKGROUND);
 			RGBA bgColorWithAlpha = new RGBA(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue(), bgOwnColor.getAlpha());
 			// RGB bgColor = new RGB(bgOwnColor.getRed(), bgOwnColor.getGreen(), bgOwnColor.getBlue());
-			supportGC.setBackground(new Color(bgColorWithAlpha));
+			supportGC.setBackground(new Color(support.getDevice(), bgColorWithAlpha));
 			supportGC.setAlpha(bgColorWithAlpha.alpha);
 			supportGC.fillRectangle(support.getBounds());
 			drawer.drawAll(isSelected);
