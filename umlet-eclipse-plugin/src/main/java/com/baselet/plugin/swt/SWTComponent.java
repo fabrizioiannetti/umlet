@@ -241,6 +241,7 @@ public class SWTComponent implements Component {
 										.setHeight(fontSize)
 										.createFont(getDevice()));
 					}
+					supportGC.setAlpha(style.getForegroundColor().getAlpha());
 					for (StringStyle line : lines) {
 						double dx = 0;
 						switch (align) {
