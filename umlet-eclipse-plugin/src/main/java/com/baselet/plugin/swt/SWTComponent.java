@@ -211,9 +211,9 @@ public class SWTComponent implements Component {
 				@Override
 				public void run(Style style) {
 					supportGC.setAlpha(style.getBackgroundColor().getAlpha());
-					supportGC.fillRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius, (int) radius);
+					supportGC.fillRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius * 2, (int) radius * 2);
 					supportGC.setAlpha(style.getForegroundColor().getAlpha());
-					supportGC.drawRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius, (int) radius);
+					supportGC.drawRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius * 2, (int) radius * 2);
 				}
 			});
 		}
