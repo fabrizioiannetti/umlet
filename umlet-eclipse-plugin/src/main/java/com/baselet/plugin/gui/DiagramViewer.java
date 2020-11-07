@@ -349,18 +349,6 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		}
 	}
 
-	public void setAttributesForSelected(String newAttributes) {
-		List<GridElement> selectedElements = selector.getSelectedElements();
-		if (!selectedElements.isEmpty()) {
-			GridElement gridElement = selectedElements.get(selectedElements.size() - 1);
-			String currentAttributes = gridElement.getPanelAttributes();
-			if (!newAttributes.equals(currentAttributes)) {
-				gridElement.setPanelAttributes(newAttributes);
-				canvas.redraw();
-			}
-		}
-	}
-
 	public void setExclusiveTo(DiagramViewer other) {
 		exclusiveTo = other;
 	}
@@ -728,19 +716,34 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		}
 
 		public void insert(List<GridElement> elements) {
-			executeCommand(new Duplicate(elements, true));
+			if (!elements.isEmpty()) {
+				executeCommand(new Duplicate(elements, true));
+			}
 		}
 
 		public void setFgColor(String colorName, Collection<GridElement> elements) {
-			executeCommand(new ChangeElementSettings("fg", colorName, elements));
+			if (!elements.isEmpty()) {
+				executeCommand(new ChangeElementSettings("fg", colorName, elements));
+			}
 		}
 
 		public void setBgColor(String colorName, Collection<GridElement> elements) {
-			executeCommand(new ChangeElementSettings("bg", colorName, elements));
+			if (!elements.isEmpty()) {
+				executeCommand(new ChangeElementSettings("bg", colorName, elements));
+			}
 		}
 
 		public void setAttributes(String attributesText, List<GridElement> elements) {
-			executeCommand(new ChangeElementSettings(attributesText, elements));
+			if (!elements.isEmpty()) {
+				// do not queue a modification command if there is
+				// no change in attributes
+				for (GridElement element : elements) {
+					if (!element.getPanelAttributes().equals(attributesText)) {
+						executeCommand(new ChangeElementSettings(attributesText, elements));
+						break;
+					}
+				}
+			}
 		}
 	}
 

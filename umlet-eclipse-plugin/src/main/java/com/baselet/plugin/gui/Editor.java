@@ -199,7 +199,7 @@ public class Editor extends EditorPart {
 		@Override
 		public void textChanged(TextEvent event) {
 			if (source != null && source.canDoOperation(IOperationTarget.SET_ATTRIBUTES)) {
-				source.doOperation(IOperationTarget.SET_ATTRIBUTES, getSelectedInDiagram(), propertiesTextViewer.getDocument().get());
+				source.doOperation(IOperationTarget.SET_ATTRIBUTES, getFocusedInDiagram(), propertiesTextViewer.getDocument().get());
 			}
 		}
 	}
@@ -379,6 +379,17 @@ public class Editor extends EditorPart {
 				GridElement ge = (GridElement) object;
 				selectedElements.add(ge);
 			}
+		}
+		return selectedElements;
+	}
+
+	private ArrayList<GridElement> getFocusedInDiagram() {
+		IStructuredSelection selection = (IStructuredSelection) diagramViewer.getSelection();
+		ArrayList<GridElement> selectedElements = new ArrayList<GridElement>();
+		if (!selection.isEmpty()) {
+			Object[] elements = selection.toArray();
+			GridElement ge = (GridElement) elements[elements.length - 1];
+			selectedElements.add(ge);
 		}
 		return selectedElements;
 	}
