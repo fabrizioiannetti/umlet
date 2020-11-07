@@ -19,10 +19,8 @@ import org.eclipse.ui.part.EditorActionBarContributor;
 
 import com.baselet.control.constants.MenuConstants;
 import com.baselet.control.enums.Program;
-import com.baselet.plugin.gui.EclipseGUI.Pane;
-import com.baselet.plugin.gui.Editor.IPaneListener;
 
-public class Contributor extends EditorActionBarContributor implements IPaneListener {
+public class Contributor extends EditorActionBarContributor {
 
 	public enum ActionName {
 		COPY, CUT, PASTE, SELECTALL, DELETE, UNDO, REDO
@@ -201,15 +199,10 @@ public class Contributor extends EditorActionBarContributor implements IPaneList
 	public void setActiveEditor(IEditorPart targetEditor) {
 		if (targetEditor instanceof Editor) {
 			this.targetEditor = (Editor) targetEditor;
-			this.targetEditor.addPaneListener(this);
+			setGlobalActionHandlers();
 		}
 		else {
 			this.targetEditor = null;
 		}
-	}
-
-	@Override
-	public void paneSelected(Pane paneType) {
-		setGlobalActionHandlers();
 	}
 }

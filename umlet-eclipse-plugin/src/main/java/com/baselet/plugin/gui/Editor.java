@@ -53,7 +53,6 @@ import com.baselet.diagram.draw.helper.theme.ThemeFactory;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.old.custom.CustomElementHandler;
 import com.baselet.plugin.MainPlugin;
-import com.baselet.plugin.gui.EclipseGUI.Pane;
 import com.baselet.plugin.swt.DiagramIO;
 import com.baselet.plugin.swt.IElementFactory;
 import com.baselet.plugin.swt.SWTDiagramHandler;
@@ -71,10 +70,6 @@ public class Editor extends EditorPart {
 		public void doOperation(int operation, List<GridElement> elements, Object value) {
 			propertiesTextViewer.doOperation(operation);
 		}
-	}
-
-	public interface IPaneListener {
-		public void paneSelected(Pane paneType);
 	}
 
 	private static final Logger log = LoggerFactory.getLogger(Editor.class);
@@ -127,8 +122,6 @@ public class Editor extends EditorPart {
 	private IWorkbenchAction redoAction;
 	private final Map<String, Action> fgColorActions = new HashMap<String, Action>();
 	private final Map<String, Action> bgColorActions = new HashMap<String, Action>();
-
-	private IPaneListener paneListener;
 
 	private OperationTargetToTextBridge targetToTextBridge;
 
@@ -191,7 +184,9 @@ public class Editor extends EditorPart {
 					processor.forElement(null);
 				}
 			}
-			EclipseGUI.elementsSelected(array.length > 0);
+			Contributor contributor = (Contributor) getEditorSite().getActionBarContributor();
+			contributor.setElementsSelected(array.length > 0);
+			// EclipseGUI.elementsSelected(array.length > 0);
 			dirtyChanged();
 		}
 
@@ -210,25 +205,21 @@ public class Editor extends EditorPart {
 	}
 
 	private class PaneTypeOnFocus extends FocusAdapter {
-		private final Pane paneType;
 		private final DiagramViewer viewer;
 
-		public PaneTypeOnFocus(Pane paneType) {
-			this(paneType, null);
+		public PaneTypeOnFocus() {
+			this(null);
 		}
 
-		public PaneTypeOnFocus(Pane paneType, DiagramViewer viewer) {
-			this.paneType = paneType;
+		public PaneTypeOnFocus(DiagramViewer viewer) {
 			this.viewer = viewer;
 		}
 
 		@Override
 		public void focusGained(FocusEvent e) {
-			if (paneListener != null) {
-				paneListener.paneSelected(paneType);
-				if (viewer != null) {
-					EclipseGUI.elementsSelected(!viewer.getSelection().isEmpty());
-				}
+			if (viewer != null) {
+				Contributor contributor = (Contributor) getEditorSite().getActionBarContributor();
+				contributor.setElementsSelected(!viewer.getSelection().isEmpty());
 			}
 		}
 	}
@@ -258,9 +249,9 @@ public class Editor extends EditorPart {
 		paletteViewer.setPaletteFor(diagramViewer);
 
 		// set the pane type on focus events
-		propertiesTextViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.PROPERTY));
-		paletteViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, paletteViewer));
-		diagramViewer.getControl().addFocusListener(new PaneTypeOnFocus(Pane.DIAGRAM, diagramViewer));
+		propertiesTextViewer.getControl().addFocusListener(new PaneTypeOnFocus());
+		paletteViewer.getControl().addFocusListener(new PaneTypeOnFocus(paletteViewer));
+		diagramViewer.getControl().addFocusListener(new PaneTypeOnFocus(diagramViewer));
 
 		// mark diagrams as exclusive (only one can have selected elements)
 		diagramViewer.setExclusiveTo(paletteViewer);
@@ -453,18 +444,6 @@ public class Editor extends EditorPart {
 		super.dispose();
 		disposeActions();
 		log.info("Call editor.dispose( )" + uuid.toString());
-	}
-
-	void addPaneListener(IPaneListener listener) {
-		// TODO@fab only one for now
-		paneListener = listener;
-	}
-
-	void removePaneListener(IPaneListener listener) {
-		// TODO@fab only one for now
-		if (listener == paneListener) {
-			paneListener = null;
-		}
 	}
 
 	public ITextOperationTarget getPropertyPane() {
