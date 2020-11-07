@@ -18,6 +18,7 @@ public interface IOperationTarget {
 	static final int INSERT = ITextOperationTarget.STRIP_PREFIX + 2;
 	static final int SET_FG_COLOR = ITextOperationTarget.STRIP_PREFIX + 3;
 	static final int SET_BG_COLOR = ITextOperationTarget.STRIP_PREFIX + 4;
+	static final int SET_ATTRIBUTES = ITextOperationTarget.STRIP_PREFIX + 5;
 
 	/**
 	 * Returns whether the operation specified by the given operation code

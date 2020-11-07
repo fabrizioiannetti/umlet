@@ -219,12 +219,16 @@ public class Editor extends EditorPart {
 					}
 				}
 				GridElement e = (GridElement) array[array.length - 1];
-				propertiesTextViewer.getDocument().set(e.getPanelAttributes());
-				updateContentAssistant(e);
+				if (!e.getPanelAttributes().equals(propertiesTextViewer.getDocument().get())) {
+					propertiesTextViewer.getDocument().set(e.getPanelAttributes());
+					updateContentAssistant(e);
+				}
 			}
 			else {
-				propertiesTextViewer.getDocument().set(diagram.getHelpText());
-				updateContentAssistant(null);
+				if (!diagram.getHelpText().equals(propertiesTextViewer.getDocument().get())) {
+					propertiesTextViewer.getDocument().set(diagram.getHelpText());
+					updateContentAssistant(null);
+				}
 			}
 			EclipseGUI.elementsSelected(array.length > 0);
 			dirtyChanged();
@@ -238,8 +242,8 @@ public class Editor extends EditorPart {
 
 		@Override
 		public void textChanged(TextEvent event) {
-			if (source != null) {
-				source.setAttributesForSelected(propertiesTextViewer.getDocument().get());
+			if (source != null && source.canDoOperation(IOperationTarget.SET_ATTRIBUTES)) {
+				source.doOperation(IOperationTarget.SET_ATTRIBUTES, getSelectedInDiagram(), propertiesTextViewer.getDocument().get());
 			}
 		}
 	}
@@ -415,6 +419,14 @@ public class Editor extends EditorPart {
 	}
 
 	private void setColorOnSelection(String colorName, boolean fg) {
+		ArrayList<GridElement> selectedElements = getSelectedInDiagram();
+		int operation = fg ? IOperationTarget.SET_FG_COLOR : IOperationTarget.SET_BG_COLOR;
+		if (diagramViewer.canDoOperation(operation)) {
+			diagramViewer.doOperation(operation, selectedElements, colorName);
+		}
+	}
+
+	private ArrayList<GridElement> getSelectedInDiagram() {
 		IStructuredSelection selection = (IStructuredSelection) diagramViewer.getSelection();
 		ArrayList<GridElement> selectedElements = new ArrayList<GridElement>();
 		for (Object object : selection.toArray()) {
@@ -423,8 +435,7 @@ public class Editor extends EditorPart {
 				selectedElements.add(ge);
 			}
 		}
-		int operation = fg ? IOperationTarget.SET_FG_COLOR : IOperationTarget.SET_BG_COLOR;
-		diagramViewer.doOperation(operation, selectedElements, colorName);
+		return selectedElements;
 	}
 
 	private void disposeActions() {

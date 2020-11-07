@@ -648,10 +648,15 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		}
 
 		public static class ChangeElementSettings extends Command {
+			private final static String ATTRIBUTES_TEXT_KEY = "allAttributes";
 
 			private final String key;
 			private final Map<GridElement, String> elementValueMap;
 			private Map<GridElement, String> oldValue;
+
+			public ChangeElementSettings(String attributes, Collection<GridElement> element) {
+				this(ATTRIBUTES_TEXT_KEY, createSingleValueMap(attributes, element));
+			}
 
 			public ChangeElementSettings(String key, String value, Collection<GridElement> element) {
 				this(key, createSingleValueMap(value, element));
@@ -668,15 +673,26 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 				for (Entry<GridElement, String> entry : elementValueMap.entrySet()) {
 					GridElement e = entry.getKey();
-					oldValue.put(e, e.getSetting(key));
-					e.setProperty(key, entry.getValue());
+					if (key == ATTRIBUTES_TEXT_KEY) {
+						oldValue.put(e, e.getPanelAttributes());
+						e.setPanelAttributes(entry.getValue());
+					}
+					else {
+						oldValue.put(e, e.getSetting(key));
+						e.setProperty(key, entry.getValue());
+					}
 				}
 			}
 
 			@Override
 			public void undo() {
 				for (Entry<GridElement, String> entry : oldValue.entrySet()) {
-					entry.getKey().setProperty(key, entry.getValue());
+					if (key == ATTRIBUTES_TEXT_KEY) {
+						entry.getKey().setPanelAttributes(entry.getValue());
+					}
+					else {
+						entry.getKey().setProperty(key, entry.getValue());
+					}
 				}
 			}
 
@@ -722,6 +738,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		public void setBgColor(String colorName, Collection<GridElement> elements) {
 			executeCommand(new ChangeElementSettings("bg", colorName, elements));
 		}
+
+		public void setAttributes(String attributesText, List<GridElement> elements) {
+			executeCommand(new ChangeElementSettings(attributesText, elements));
+		}
 	}
 
 	private Point snapToGrid(Point point) {
@@ -741,6 +761,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			case IOperationTarget.REDO:
 			case IOperationTarget.DUPLICATE:
 			case IOperationTarget.INSERT:
+			case IOperationTarget.SET_BG_COLOR:
+			case IOperationTarget.SET_FG_COLOR:
+			case IOperationTarget.SET_ATTRIBUTES:
 				return true;
 			default:
 				break;
@@ -780,6 +803,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				break;
 			case IOperationTarget.SET_BG_COLOR:
 				controller.setBgColor(value.toString(), elements);
+				break;
+			case IOperationTarget.SET_ATTRIBUTES:
+				controller.setAttributes(value.toString(), elements);
 				break;
 			default:
 				break;
