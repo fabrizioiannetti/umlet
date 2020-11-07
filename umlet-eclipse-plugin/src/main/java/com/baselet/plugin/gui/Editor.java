@@ -186,7 +186,6 @@ public class Editor extends EditorPart {
 			}
 			Contributor contributor = (Contributor) getEditorSite().getActionBarContributor();
 			contributor.setElementsSelected(array.length > 0);
-			// EclipseGUI.elementsSelected(array.length > 0);
 			dirtyChanged();
 		}
 

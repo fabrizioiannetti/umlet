@@ -23,33 +23,33 @@ import com.baselet.control.enums.Program;
 public class Contributor extends EditorActionBarContributor {
 
 	public enum ActionName {
-		COPY, CUT, PASTE, SELECTALL, DELETE, UNDO, REDO
+		COPY, CUT, PASTE, SELECTALL, DELETE, UNDO, REDO, ZOOM
 	}
 
-	private static Map<ActionName, Integer> actionNameToTextOperation;
+	private static Map<ActionName, Integer> actionNameToOperation;
 	{
-		actionNameToTextOperation = new HashMap<Contributor.ActionName, Integer>();
-		actionNameToTextOperation.put(ActionName.COPY, IOperationTarget.COPY);
-		actionNameToTextOperation.put(ActionName.CUT, IOperationTarget.CUT);
-		actionNameToTextOperation.put(ActionName.PASTE, IOperationTarget.PASTE);
-		actionNameToTextOperation.put(ActionName.SELECTALL, IOperationTarget.SELECT_ALL);
-		actionNameToTextOperation.put(ActionName.DELETE, IOperationTarget.DELETE);
-		actionNameToTextOperation.put(ActionName.UNDO, IOperationTarget.UNDO);
-		actionNameToTextOperation.put(ActionName.REDO, IOperationTarget.REDO);
+		actionNameToOperation = new HashMap<Contributor.ActionName, Integer>();
+		actionNameToOperation.put(ActionName.COPY, IOperationTarget.COPY);
+		actionNameToOperation.put(ActionName.CUT, IOperationTarget.CUT);
+		actionNameToOperation.put(ActionName.PASTE, IOperationTarget.PASTE);
+		actionNameToOperation.put(ActionName.SELECTALL, IOperationTarget.SELECT_ALL);
+		actionNameToOperation.put(ActionName.DELETE, IOperationTarget.DELETE);
+		actionNameToOperation.put(ActionName.UNDO, IOperationTarget.UNDO);
+		actionNameToOperation.put(ActionName.REDO, IOperationTarget.REDO);
 	}
 
 	private final MenuFactoryEclipse menuFactory = MenuFactoryEclipse.getInstance();
 
-	private IAction undoActionGlobal;
-	private IAction redoActionGlobal;
-	private IAction printActionGlobal;
+	private IAction undoAction;
+	private IAction redoAction;
+	private IAction printAction;
 
 	// actions to execute on a pane
 	private IAction copyAction;
 	private IAction cutAction;
 	private IAction pasteAction;
 	private IAction selectAllAction;
-	private Action deleteAction;
+	private IAction deleteAction;
 
 	private List<IAction> exportAsActionList;
 
@@ -57,17 +57,17 @@ public class Contributor extends EditorActionBarContributor {
 
 	private Editor targetEditor;
 
-	private Action createOperationTargetAction(final ActionName action) {
-		Action propertyAction = new Action() {
+	private IAction createOperationTargetAction(final ActionName action, final Object value, String name, int style) {
+		Action propertyAction = new Action(name, style) {
 			@Override
 			public void run() {
 				if (targetEditor != null) {
 					IOperationTarget target = targetEditor.getOperationTarget();
 					// Note: operation target has the same codes as text operation target
-					Integer textOperation = actionNameToTextOperation.get(action);
+					Integer textOperation = actionNameToOperation.get(action);
 					if (textOperation != null) {
 						if (target.canDoOperation(textOperation)) {
-							target.doOperation(textOperation, null, null);
+							target.doOperation(textOperation, null, value);
 						}
 					}
 				}
@@ -76,13 +76,17 @@ public class Contributor extends EditorActionBarContributor {
 		return propertyAction;
 	}
 
+	private IAction createOperationTargetAction(ActionName action) {
+		return createOperationTargetAction(action, null, null, IAction.AS_PUSH_BUTTON);
+	}
+
 	@Override
 	public void init(IActionBars actionBars) {
 		super.init(actionBars);
 
-		undoActionGlobal = createOperationTargetAction(ActionName.UNDO);
-		redoActionGlobal = createOperationTargetAction(ActionName.REDO);
-		printActionGlobal = menuFactory.createPrint();
+		undoAction = createOperationTargetAction(ActionName.UNDO);
+		redoAction = createOperationTargetAction(ActionName.REDO);
+		printAction = menuFactory.createPrint();
 
 		deleteAction = createOperationTargetAction(ActionName.DELETE);
 		copyAction = createOperationTargetAction(ActionName.COPY);
@@ -90,8 +94,8 @@ public class Contributor extends EditorActionBarContributor {
 		pasteAction = createOperationTargetAction(ActionName.PASTE);
 		selectAllAction = createOperationTargetAction(ActionName.SELECTALL);
 
-		undoActionGlobal.setEnabled(false);
-		redoActionGlobal.setEnabled(false);
+		undoAction.setEnabled(false);
+		redoAction.setEnabled(false);
 		deleteAction.setEnabled(false);
 		copyAction.setEnabled(false);
 		cutAction.setEnabled(false);
@@ -125,7 +129,7 @@ public class Contributor extends EditorActionBarContributor {
 		menu.add(menuFactory.createGenerate());
 		menu.add(menuFactory.createGenerateOptions());
 
-		zoomMenu = menuFactory.createZoom();
+		zoomMenu = createZoom();
 		menu.add(zoomMenu);
 
 		exportAsActionList = menuFactory.createExportAsActions();
@@ -137,10 +141,19 @@ public class Contributor extends EditorActionBarContributor {
 
 		menu.add(menuFactory.createEditCurrentPalette());
 		menu.add(custom);
-		menu.add(menuFactory.createMailTo());
 		menu.add(new Separator());
 		menu.add(help);
 		menu.add(menuFactory.createOptions());
+	}
+
+	private IMenuManager createZoom() {
+		final IMenuManager zoomMenu = new MenuManager("Zoom");
+		for (int zoom = 10; zoom <= 200; zoom += 10) {
+			IAction action = createOperationTargetAction(ActionName.ZOOM, Integer.valueOf(zoom), zoom + "%", IAction.AS_RADIO_BUTTON);
+			action.setChecked(zoom == 100);
+			zoomMenu.add(action);
+		}
+		return zoomMenu;
 	}
 
 	public void setExportAsEnabled(boolean enabled) {
@@ -161,16 +174,16 @@ public class Contributor extends EditorActionBarContributor {
 	}
 
 	public void setUndoRedoAvailable(boolean undoAvailable, boolean redoAvailable) {
-		undoActionGlobal.setEnabled(undoAvailable);
-		redoActionGlobal.setEnabled(redoAvailable);
+		undoAction.setEnabled(undoAvailable);
+		redoAction.setEnabled(redoAvailable);
 	}
 
 	private void setGlobalActionHandlers() {
 
 		// Global actions which are always the same
-		getActionBars().setGlobalActionHandler(ActionFactory.UNDO.getId(), undoActionGlobal);
-		getActionBars().setGlobalActionHandler(ActionFactory.REDO.getId(), redoActionGlobal);
-		getActionBars().setGlobalActionHandler(ActionFactory.PRINT.getId(), printActionGlobal);
+		getActionBars().setGlobalActionHandler(ActionFactory.UNDO.getId(), undoAction);
+		getActionBars().setGlobalActionHandler(ActionFactory.REDO.getId(), redoAction);
+		getActionBars().setGlobalActionHandler(ActionFactory.PRINT.getId(), printAction);
 
 		getActionBars().setGlobalActionHandler(ActionFactory.COPY.getId(), copyAction);
 		getActionBars().setGlobalActionHandler(ActionFactory.CUT.getId(), cutAction);

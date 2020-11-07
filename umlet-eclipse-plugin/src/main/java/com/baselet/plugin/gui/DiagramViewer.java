@@ -745,6 +745,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				}
 			}
 		}
+
+		public void setZoom(int zoomPercent) {
+			// TODO Auto-generated method stub
+		}
 	}
 
 	private Point snapToGrid(Point point) {
@@ -767,6 +771,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			case IOperationTarget.SET_BG_COLOR:
 			case IOperationTarget.SET_FG_COLOR:
 			case IOperationTarget.SET_ATTRIBUTES:
+			case IOperationTarget.SET_ZOOM:
 				return true;
 			default:
 				break;
@@ -809,6 +814,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				break;
 			case IOperationTarget.SET_ATTRIBUTES:
 				controller.setAttributes(value.toString(), elements);
+				break;
+			case IOperationTarget.SET_ZOOM:
+				controller.setZoom(((Integer) value).intValue());
 				break;
 			default:
 				break;

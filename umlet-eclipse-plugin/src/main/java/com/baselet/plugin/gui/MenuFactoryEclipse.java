@@ -1,36 +1,25 @@
 package com.baselet.plugin.gui;
 
 import static com.baselet.control.constants.MenuConstants.ABOUT_PROGRAM;
-import static com.baselet.control.constants.MenuConstants.COPY;
 import static com.baselet.control.constants.MenuConstants.CUSTOM_ELEMENTS_TUTORIAL;
-import static com.baselet.control.constants.MenuConstants.CUT;
-import static com.baselet.control.constants.MenuConstants.DELETE;
 import static com.baselet.control.constants.MenuConstants.EDIT_CURRENT_PALETTE;
 import static com.baselet.control.constants.MenuConstants.EDIT_SELECTED;
 import static com.baselet.control.constants.MenuConstants.EXPORT_AS;
 import static com.baselet.control.constants.MenuConstants.GENERATE_CLASS;
 import static com.baselet.control.constants.MenuConstants.GENERATE_CLASS_OPTIONS;
-import static com.baselet.control.constants.MenuConstants.MAIL_TO;
 import static com.baselet.control.constants.MenuConstants.NEW_CE;
 import static com.baselet.control.constants.MenuConstants.NEW_FROM_TEMPLATE;
 import static com.baselet.control.constants.MenuConstants.ONLINE_HELP;
 import static com.baselet.control.constants.MenuConstants.ONLINE_SAMPLE_DIAGRAMS;
 import static com.baselet.control.constants.MenuConstants.OPTIONS;
-import static com.baselet.control.constants.MenuConstants.PASTE;
 import static com.baselet.control.constants.MenuConstants.PRINT;
 import static com.baselet.control.constants.MenuConstants.PROGRAM_HOMEPAGE;
 import static com.baselet.control.constants.MenuConstants.RATE_PROGRAM;
-import static com.baselet.control.constants.MenuConstants.REDO;
 import static com.baselet.control.constants.MenuConstants.SEARCH;
-import static com.baselet.control.constants.MenuConstants.SELECT_ALL;
-import static com.baselet.control.constants.MenuConstants.UNDO;
 import static com.baselet.control.constants.MenuConstants.VIDEO_TUTORIAL;
-import static com.baselet.control.constants.MenuConstants.ZOOM;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.swing.SwingUtilities;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
@@ -41,12 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.baselet.control.constants.Constants;
-import com.baselet.diagram.CurrentDiagram;
-import com.baselet.diagram.DiagramHandler;
-import com.baselet.gui.CurrentGui;
-import com.baselet.gui.menu.MenuFactory;
 
-public class MenuFactoryEclipse extends MenuFactory {
+public class MenuFactoryEclipse {
 
 	private static final Logger log = LoggerFactory.getLogger(MenuFactoryEclipse.class);
 
@@ -59,44 +44,25 @@ public class MenuFactoryEclipse extends MenuFactory {
 		return instance;
 	}
 
-	@Override
-	public void doAction(final String menuItem, final Object param) {
+	public void doAction(final String menuItem, @SuppressWarnings("unused") final Object param) {
 		log.info("doAction " + menuItem);
-		DiagramHandler actualHandler = CurrentDiagram.getInstance().getDiagramHandler();
+		// DiagramHandler actualHandler = CurrentDiagram.getInstance().getDiagramHandler();
 		// Edit Palette cannot be put in a separate invokeLater thread, or otherwise getActivePage() will be null!
 		if (menuItem.equals(EDIT_CURRENT_PALETTE)) {
-			// TODO@fab
-			// String paletteName = Main.getInstance().getPalette().getFileHandler().getFullPathName();
-			// IFileStore fileStore = EFS.getLocalFileSystem().getStore(new File(paletteName).toURI());
-			// if (!fileStore.fetchInfo().isDirectory() && fileStore.fetchInfo().exists()) {
-			// IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-			// try {
-			// IDE.openEditorOnFileStore(page, fileStore);
-			// } catch (PartInitException e) {
-			// log.error("Cannot open palette file", e);
-			// }
-			// }
 		}
 		else if (menuItem.equals(SEARCH)) {
-			SwingUtilities.invokeLater(new Runnable() {
-				@Override
-				public void run() {
-					CurrentGui.getInstance().getGui().enableSearch(true);
-				}
-			});
-		}
-		else if (menuItem.equals(ZOOM) && actualHandler != null) {
-			SwingUtilities.invokeLater(new Runnable() {
-				@Override
-				public void run() {
-					CurrentDiagram.getInstance().getDiagramHandler().setGridAndZoom((Integer) param);
-				}
-			});
+			// TODO@fab
+			// SwingUtilities.invokeLater(new Runnable() {
+			// @Override
+			// public void run() {
+			// CurrentGui.getInstance().getGui().enableSearch(true);
+			// }
+			// });
 		}
 		// If the action is not overwritten, it is part of the default actions
 		else {
 			log.debug("super.doAction");
-			super.doAction(menuItem, param);
+			// super.doAction(menuItem, param);
 			log.debug("super.doAction complete");
 		}
 		log.debug("doAction complete");
@@ -122,10 +88,6 @@ public class MenuFactoryEclipse extends MenuFactory {
 		return createAction(PROGRAM_HOMEPAGE, null);
 	}
 
-	public Action createMailTo() {
-		return createAction(MAIL_TO, null);
-	}
-
 	public Action createRateProgram() {
 		return createAction(RATE_PROGRAM, null);
 	}
@@ -142,36 +104,8 @@ public class MenuFactoryEclipse extends MenuFactory {
 		return createAction(CUSTOM_ELEMENTS_TUTORIAL, null);
 	}
 
-	public Action createUndo() {
-		return createAction(UNDO, null);
-	}
-
-	public Action createRedo() {
-		return createAction(REDO, null);
-	}
-
 	public Action createPrint() {
 		return createAction(PRINT, null);
-	}
-
-	public Action createCopy() {
-		return createAction(COPY, null);
-	}
-
-	public Action createCut() {
-		return createAction(CUT, null);
-	}
-
-	public Action createPaste() {
-		return createAction(PASTE, null);
-	}
-
-	public Action createDelete() {
-		return createAction(DELETE, null);
-	}
-
-	public Action createSelectAll() {
-		return createAction(SELECT_ALL, null);
 	}
 
 	public Action createSearch() {
@@ -204,17 +138,9 @@ public class MenuFactoryEclipse extends MenuFactory {
 		return createAction(GENERATE_CLASS_OPTIONS, null);
 	}
 
-	public IMenuManager createZoom() {
-		final IMenuManager zoom = new MenuManager(ZOOM);
-		for (String z : Constants.zoomValueList) {
-			zoom.add(createAction(z, ZOOM, Integer.parseInt(z.substring(0, z.length() - 2)), IAction.AS_RADIO_BUTTON));
-		}
-		return zoom;
-	}
-
 	private final List<Action> aList = new ArrayList<Action>();
 
-	public IMenuManager createNewCustomElementFromTemplate(final Contributor con) {
+	public IMenuManager createNewCustomElementFromTemplate(@SuppressWarnings("unused") final Contributor con) {
 		IMenuManager menu = new MenuManager(NEW_FROM_TEMPLATE);
 		// TODO@fab no Main
 		String[] templates = { "no templates yet" };
@@ -226,10 +152,10 @@ public class MenuFactoryEclipse extends MenuFactory {
 		menu.addMenuListener(new IMenuListener() {
 			@Override
 			public void menuAboutToShow(IMenuManager manager) {
-				for (Action a : aList) {
-					// TODO@fab
-					// a.setEnabled(!con.isCustomPanelEnabled());
-				}
+				// for (Action a : aList) {
+				// // TODO@fab
+				// a.setEnabled(!con.isCustomPanelEnabled());
+				// }
 			}
 		});
 		return menu;
