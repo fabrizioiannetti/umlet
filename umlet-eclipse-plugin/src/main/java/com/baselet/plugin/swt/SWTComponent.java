@@ -126,12 +126,13 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void drawArc(final double x, final double y, final double width, final double height, final double start, final double extent, final boolean open) {
+			final Rectangle bounds = asRect(x, y, width, height, style.getLineWidth());
 			// TODO@fab open ?
 			addDrawable(new StyledDrawfunction() {
 				@Override
 				public void run(Style style) {
 					supportGC.setAlpha(style.getForegroundColor().getAlpha());
-					supportGC.drawArc((int) x, (int) y, (int) width, (int) height, (int) start, (int) extent);
+					supportGC.drawArc(bounds.x, bounds.y, bounds.width, bounds.height, (int) start, (int) extent);
 				}
 			});
 		}
@@ -143,13 +144,14 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void drawEllipse(final double x, final double y, final double width, final double height) {
+			final Rectangle bounds = asRect(x, y, width, height, style.getLineWidth());
 			addDrawable(new StyledDrawfunction() {
 				@Override
 				public void run(Style style) {
 					supportGC.setAlpha(style.getBackgroundColor().getAlpha());
-					supportGC.fillOval((int) x, (int) y, (int) width, (int) height);
+					supportGC.fillOval(bounds.x, bounds.y, bounds.width, bounds.height);
 					supportGC.setAlpha(style.getForegroundColor().getAlpha());
-					supportGC.drawOval((int) x, (int) y, (int) width, (int) height);
+					supportGC.drawOval(bounds.x, bounds.y, bounds.width, bounds.height);
 				}
 			});
 		}
@@ -194,26 +196,29 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void drawRectangle(final double x, final double y, final double width, final double height) {
+			final Rectangle bounds = asRect(x, y, width, height, style.getLineWidth());
 			addDrawable(new StyledDrawfunction() {
 				@Override
 				public void run(Style style) {
 					supportGC.setAlpha(style.getBackgroundColor().getAlpha());
-					supportGC.fillRectangle((int) x, (int) y, (int) width, (int) height);
+					supportGC.fillRectangle(bounds.x, bounds.y, bounds.width, bounds.height);
 					supportGC.setAlpha(style.getForegroundColor().getAlpha());
-					supportGC.drawRectangle((int) x, (int) y, (int) width, (int) height);
+					supportGC.drawRectangle(bounds.x, bounds.y, bounds.width, bounds.height);
 				}
 			});
 		}
 
 		@Override
 		public void drawRectangleRound(final double x, final double y, final double width, final double height, final double radius) {
+			final Rectangle bounds = asRect(x, y, width, height, style.getLineWidth());
+			final int r = (int) radius * 2;
 			addDrawable(new StyledDrawfunction() {
 				@Override
 				public void run(Style style) {
 					supportGC.setAlpha(style.getBackgroundColor().getAlpha());
-					supportGC.fillRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius * 2, (int) radius * 2);
+					supportGC.fillRoundRectangle(bounds.x, bounds.y, bounds.width, bounds.height, r, r);
 					supportGC.setAlpha(style.getForegroundColor().getAlpha());
-					supportGC.drawRoundRectangle((int) x, (int) y, (int) width, (int) height, (int) radius * 2, (int) radius * 2);
+					supportGC.drawRoundRectangle(bounds.x, bounds.y, bounds.width, bounds.height, r, r);
 				}
 			});
 		}
@@ -260,6 +265,12 @@ public class SWTComponent implements Component {
 
 				}
 			});
+		}
+
+		private Rectangle asRect(double x, double y, double w, double h, double lineWidth) {
+			int delta = Math.min((int) lineWidth / 2, (int) Math.min(w / 2, h / 2));
+			supportGC.setAlpha(style.getBackgroundColor().getAlpha());
+			return new Rectangle((int) x + delta, (int) y + delta, (int) w - delta * 2, (int) h - delta * 2);
 		}
 	}
 
