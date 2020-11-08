@@ -14,6 +14,7 @@ import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextListener;
@@ -33,6 +34,11 @@ import org.eclipse.swt.events.FocusAdapter;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Device;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Menu;
@@ -48,6 +54,7 @@ import org.eclipse.ui.part.EditorPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.baselet.diagram.draw.helper.ColorOwn;
 import com.baselet.diagram.draw.helper.theme.Theme.PredefinedColors;
 import com.baselet.diagram.draw.helper.theme.ThemeFactory;
 import com.baselet.element.interfaces.GridElement;
@@ -347,14 +354,26 @@ public class Editor extends EditorPart {
 		undoAction = ActionFactory.UNDO.create(getSite().getWorkbenchWindow());
 		redoAction = ActionFactory.REDO.create(getSite().getWorkbenchWindow());
 
-		for (PredefinedColors color : ThemeFactory.getCurrentTheme().getColorMap().keySet()) {
-			fgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase()) {
+		for (final PredefinedColors color : ThemeFactory.getCurrentTheme().getColorMap().keySet()) {
+			ImageDescriptor descriptor = new ImageDescriptor() {
+				@Override
+				public Image createImage(boolean returnMissingImageOnError, Device device) {
+					final Image image = new Image(device, 16, 16);
+					GC gc = new GC(image);
+					ColorOwn c = ThemeFactory.getCurrentTheme().getColorMap().get(color);
+					gc.setBackground(new Color(device, new RGB(c.getRed(), c.getGreen(), c.getBlue())));
+					gc.fillRectangle(image.getBounds());
+					gc.dispose();
+					return image;
+				}
+			};
+			fgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase(), descriptor) {
 				@Override
 				public void run() {
 					setColorOnSelection(getText(), true);
 				}
 			});
-			bgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase()) {
+			bgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase(), descriptor) {
 				@Override
 				public void run() {
 					setColorOnSelection(getText(), false);
@@ -395,6 +414,9 @@ public class Editor extends EditorPart {
 	}
 
 	private void disposeActions() {
+		if (deleteAction != null) {
+			deleteAction.dispose();
+		}
 		if (copyAction != null) {
 			copyAction.dispose();
 		}
@@ -406,6 +428,12 @@ public class Editor extends EditorPart {
 		}
 		if (selectAllAction != null) {
 			selectAllAction.dispose();
+		}
+		if (undoAction != null) {
+			undoAction.dispose();
+		}
+		if (redoAction != null) {
+			redoAction.dispose();
 		}
 	}
 
