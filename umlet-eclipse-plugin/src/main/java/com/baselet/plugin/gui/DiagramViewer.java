@@ -62,6 +62,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private DiagramController controller;
 	private final int gridSize = 10;
 	private DiagramViewer editableDiagram;
+	private boolean readOnly;
 	private final Runnable canvasRedraw = new Runnable() {
 		@Override
 		public void run() {
@@ -102,13 +103,15 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
 						dragMachine = new LassoMachine(mouseDownAt);
 					}
-					else if (resizeDirections.isEmpty()) {
-						dragMachine = new DragMachine(mouseDownAt);
-					}
-					else {
-						GridElement onElement = getElementAtPosition(mouseDownAt);
-						selector.selectOnly(onElement);
-						dragMachine = new ResizeMachine(mouseDownAt, resizeDirections, (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2);
+					else if (!readOnly) {
+						if (resizeDirections.isEmpty()) {
+							dragMachine = new DragMachine(mouseDownAt);
+						}
+						else {
+							GridElement onElement = getElementAtPosition(mouseDownAt);
+							selector.selectOnly(onElement);
+							dragMachine = new ResizeMachine(mouseDownAt, resizeDirections, (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2);
+						}
 					}
 				}
 			}
@@ -761,18 +764,19 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	public boolean canDoOperation(int operation) {
 		switch (operation) {
 			case IOperationTarget.COPY:
+			case IOperationTarget.SELECT_ALL:
+			case IOperationTarget.DUPLICATE:
+				return true;
 			case IOperationTarget.DELETE:
 			case IOperationTarget.PASTE:
-			case IOperationTarget.SELECT_ALL:
 			case IOperationTarget.UNDO:
 			case IOperationTarget.REDO:
-			case IOperationTarget.DUPLICATE:
 			case IOperationTarget.INSERT:
 			case IOperationTarget.SET_BG_COLOR:
 			case IOperationTarget.SET_FG_COLOR:
 			case IOperationTarget.SET_ATTRIBUTES:
 			case IOperationTarget.SET_ZOOM:
-				return true;
+				return !readOnly;
 			default:
 				break;
 		}
@@ -781,6 +785,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 	@Override
 	public void doOperation(int operation, List<GridElement> elements, Object value) {
+		if (!canDoOperation(operation)) {
+			return;
+		}
 		switch (operation) {
 			case IOperationTarget.DELETE:
 				controller.deleteSelected();
@@ -842,5 +849,13 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	public void setSaved() {
 		controller.setChangeOrigin();
 		fireCurrentSelection();
+	}
+
+	public boolean isReadOnly() {
+		return readOnly;
+	}
+
+	public void setReadOnly(boolean readOnly) {
+		this.readOnly = readOnly;
 	}
 }
