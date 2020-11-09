@@ -345,6 +345,8 @@ public class Editor extends EditorPart {
 		}
 	}
 
+	private final List<Image> colorImages = new ArrayList<Image>();
+
 	private void createActions() {
 		deleteAction = ActionFactory.DELETE.create(getSite().getWorkbenchWindow());
 		copyAction = ActionFactory.COPY.create(getSite().getWorkbenchWindow());
@@ -355,25 +357,22 @@ public class Editor extends EditorPart {
 		redoAction = ActionFactory.REDO.create(getSite().getWorkbenchWindow());
 
 		for (final PredefinedColors color : ThemeFactory.getCurrentTheme().getColorMap().keySet()) {
-			ImageDescriptor descriptor = new ImageDescriptor() {
-				@Override
-				public Image createImage(boolean returnMissingImageOnError, Device device) {
-					final Image image = new Image(device, 16, 16);
-					GC gc = new GC(image);
-					ColorOwn c = ThemeFactory.getCurrentTheme().getColorMap().get(color);
-					gc.setBackground(new Color(device, new RGB(c.getRed(), c.getGreen(), c.getBlue())));
-					gc.fillRectangle(image.getBounds());
-					gc.dispose();
-					return image;
-				}
-			};
-			fgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase(), descriptor) {
+			Device device = getSite().getWorkbenchWindow().getShell().getDisplay();
+			final Image image = new Image(device, 16, 16);
+			GC gc = new GC(image);
+			ColorOwn c = ThemeFactory.getCurrentTheme().getColorMap().get(color);
+			gc.setBackground(new Color(device, new RGB(c.getRed(), c.getGreen(), c.getBlue())));
+			gc.fillRectangle(image.getBounds());
+			gc.dispose();
+			colorImages.add(image);
+			String colorName = color.name().toLowerCase();
+			fgColorActions.put(colorName, new Action(colorName, ImageDescriptor.createFromImage(image)) {
 				@Override
 				public void run() {
 					setColorOnSelection(getText(), true);
 				}
 			});
-			bgColorActions.put(color.name().toLowerCase(), new Action(color.name().toLowerCase(), descriptor) {
+			bgColorActions.put(colorName, new Action(colorName, ImageDescriptor.createFromImage(image)) {
 				@Override
 				public void run() {
 					setColorOnSelection(getText(), false);
@@ -434,6 +433,9 @@ public class Editor extends EditorPart {
 		}
 		if (redoAction != null) {
 			redoAction.dispose();
+		}
+		for (Image image : colorImages) {
+			image.dispose();
 		}
 	}
 
