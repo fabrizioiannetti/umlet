@@ -9,6 +9,7 @@ import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.DrawHandlerInterface;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.sticking.StickableMap;
+import com.baselet.plugin.export.G2DComponent;
 
 public class SWTElementFactory extends ElementFactory implements IElementFactory {
 
@@ -44,5 +45,33 @@ public class SWTElementFactory extends ElementFactory implements IElementFactory
 
 	public GridElement create(GridElement src, final Diagram targetDiagram) {
 		return create(src.getId(), src.getRectangle().copy(), src.getPanelAttributes(), src.getAdditionalAttributes(), targetDiagram);
+	}
+
+	public GridElement cloneForExport(GridElement src, final Diagram diagram) {
+		final NewGridElement element = createAssociatedGridElement(src.getId());
+
+		DrawHandlerInterface handler = new DrawHandlerInterface() {
+			@Override
+			public void updatePropertyPanel() {
+			}
+
+			@Override
+			public int getGridSize() {
+				return SharedConstants.DEFAULT_GRID_SIZE;
+			}
+
+			@Override
+			public boolean isInitialized() {
+				return true;
+			}
+
+			@Override
+			public StickableMap getStickableMap() {
+				return diagram.getStickables(element);
+			}
+		};
+
+		element.init(src.getRectangle().copy(), src.getPanelAttributes(), src.getAdditionalAttributes(), new G2DComponent(element), handler);
+		return element;
 	}
 }

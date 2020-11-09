@@ -390,7 +390,7 @@ public class Editor extends EditorPart {
 		}
 	}
 
-	private ArrayList<GridElement> getSelectedInDiagram() {
+	public ArrayList<GridElement> getSelectedInDiagram() {
 		IStructuredSelection selection = (IStructuredSelection) diagramViewer.getSelection();
 		ArrayList<GridElement> selectedElements = new ArrayList<GridElement>();
 		for (Object object : selection.toArray()) {
@@ -518,5 +518,13 @@ public class Editor extends EditorPart {
 			return targetToTextBridge;
 		}
 		return diagramViewer;
+	}
+
+	public Collection<GridElement> getSelectedOrAllInDiagram() {
+		ArrayList<GridElement> selected = getSelectedInDiagram();
+		if (selected.isEmpty()) {
+			selected.addAll(diagram.getGridElements());
+		}
+		return selected;
 	}
 }
