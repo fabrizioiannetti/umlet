@@ -163,13 +163,13 @@ public class SWTComponent implements Component {
 				addDrawable(new StyledDrawfunction() {
 					@Override
 					public void run(Style style) {
-						drawLineHelper(drawOuterLine, points);
+						drawLineHelper(style, drawOuterLine, points);
 					}
 				});
 			}
 		}
 
-		private void drawLineHelper(boolean drawOuterLine, PointDouble... points) {
+		private void drawLineHelper(Style style, boolean drawOuterLine, PointDouble... points) {
 			Path path = new Path(getDevice());
 			boolean first = true;
 			for (PointDouble point : points) {
