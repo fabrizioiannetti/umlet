@@ -2,6 +2,7 @@ package com.baselet.plugin.gui;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,12 +22,13 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.EditorActionBarContributor;
 
-import com.baselet.control.constants.Constants;
 import com.baselet.control.constants.MenuConstants;
 import com.baselet.control.enums.Program;
 import com.baselet.plugin.swt.SWTOutputHandler;
 
 public class Contributor extends EditorActionBarContributor {
+
+	public static final List<String> EXPORT_FORMAT_LIST = Arrays.asList(new String[] { "bmp", "jpg", "png" });
 
 	public enum ActionName {
 		COPY, CUT, PASTE, SELECTALL, DELETE, UNDO, REDO, ZOOM
@@ -227,7 +229,7 @@ public class Contributor extends EditorActionBarContributor {
 
 	public List<IAction> createExportAsActions() {
 		List<IAction> actions = new ArrayList<IAction>();
-		for (final String format : Constants.exportFormatList) {
+		for (final String format : EXPORT_FORMAT_LIST) {
 			Action action = new Action(format.toUpperCase() + "...") {
 				@Override
 				public void run() {
@@ -249,5 +251,4 @@ public class Contributor extends EditorActionBarContributor {
 		}
 		return actions;
 	}
-
 }

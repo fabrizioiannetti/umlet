@@ -24,12 +24,12 @@ Currently supported (bar any bug):
 * editor reports dirty state
 * save
 * content assist in properties pane
-* png, gif, bmb, jpeg export (no DPI metadata support)
+* png, bmp, jpeg export (no DPI metadata support)
 
 To do:
 
 * save as
-* export diagram (svg, pdf, eps)
+* export diagram (svg, pdf, eps, gif)
 * grouping
 * zoom
 * custom elements
@@ -44,3 +44,6 @@ Not planned:
 * email panel
 * scrollbars in diagrams
 
+limitations:
+
+* only tested on linux (GTK)
