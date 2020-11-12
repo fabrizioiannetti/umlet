@@ -14,10 +14,14 @@ import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.FileDialog;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IActionBars;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IURIEditorInput;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.EditorActionBarContributor;
@@ -228,17 +232,33 @@ public class Contributor extends EditorActionBarContributor {
 	}
 
 	public List<IAction> createExportAsActions() {
+		final Shell parentShell = getPage().getWorkbenchWindow().getShell();
 		List<IAction> actions = new ArrayList<IAction>();
 		for (final String format : EXPORT_FORMAT_LIST) {
 			Action action = new Action(format.toUpperCase() + "...") {
 				@Override
 				public void run() {
-					FileDialog d = new FileDialog(getPage().getWorkbenchWindow().getShell(), SWT.SAVE);
+					FileDialog d = new FileDialog(parentShell, SWT.SAVE);
 					d.setText("Export to...");
+					IEditorInput editorInput = targetEditor.getEditorInput();
+					if (editorInput instanceof IURIEditorInput) {
+						IURIEditorInput input = (IURIEditorInput) editorInput;
+						File file = new File(input.getURI());
+						String suggestedName = file.getName();
+						d.setFileName(suggestedName.replaceFirst("\\.uxf$", "." + format));
+						d.setFilterPath(file.getParent());
+					}
 					String exportFile = d.open();
 					if (exportFile != null) {
 						try {
 							File file = new File(exportFile);
+							if (file.exists()) {
+								// ask confirmation to overwrite
+								boolean confirmed = MessageDialog.openQuestion(parentShell, "File exists", "Do you want to overwrite the existing file " + file.getAbsolutePath() + "?");
+								if (!confirmed) {
+									return;
+								}
+							}
 							SWTOutputHandler.createAndOutputToFile(format, file, targetEditor.getSelectedOrAllInDiagram());
 						} catch (Exception e) {
 							// TODO Auto-generated catch block
