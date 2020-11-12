@@ -24,11 +24,12 @@ Currently supported (bar any bug):
 * editor reports dirty state
 * save
 * content assist in properties pane
+* png, gif, bmb, jpeg export (no DPI metadata support)
 
 To do:
 
 * save as
-* export diagram
+* export diagram (svg, pdf, eps)
 * grouping
 * zoom
 * custom elements

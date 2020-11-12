@@ -9,21 +9,21 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageTypeSpecifier;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.metadata.IIOInvalidTreeException;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.metadata.IIOMetadataNode;
-import javax.imageio.stream.ImageOutputStream;
 
 import org.apache.batik.dom.GenericDOMImplementation;
 import org.apache.batik.svggen.SVGGraphics2D;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.ImageLoader;
+import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Transform;
+import org.eclipse.swt.widgets.Display;
 import org.sourceforge.jlibeps.epsgraphics.EpsGraphics2D;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Element;
@@ -126,62 +126,104 @@ public class SWTOutputHandler {
 	}
 
 	private static void exportImg(String imgType, OutputStream ostream, Collection<GridElement> entities, FontHandler diagramFont) throws IOException {
-		Integer scale = Config.getInstance().getExportScale();
-		// #510 If DPI setting is used, try to export using correct DPI settings (for high dpi/retina displays) see https://stackoverflow.com/questions/321736/how-to-set-dpi-information-in-an-image/4833697
-		boolean exportedWithDpi = exportImgAndSetDpi(imgType, ostream, entities, diagramFont, scale);
-		if (!exportedWithDpi) { // no dpi setting is used or the format doesnt support the setting, use the simple one (at the moment only png seems to support it)
-			ImageIO.write(createImageForGridElements(entities, diagramFont, scale), imgType, ostream);
+		// TODO@fab set DPI ?
+		// Integer scale = Config.getInstance().getExportScale();
+		// // #510 If DPI setting is used, try to export using correct DPI settings (for high dpi/retina displays) see https://stackoverflow.com/questions/321736/how-to-set-dpi-information-in-an-image/4833697
+		// boolean exportedWithDpi = exportImgAndSetDpi(imgType, ostream, entities, diagramFont, scale);
+		// if (!exportedWithDpi) { // no dpi setting is used or the format doesnt support the setting, use the simple one (at the moment only png seems to support it)
+		// ImageIO.write(createImageForGridElements(entities, diagramFont, scale), imgType, ostream);
+		// }
+
+		SWTDiagramHandler diagram = new SWTDiagramHandler();
+		Display display = Display.getDefault();
+		Rectangle boundingBox = diagram.getBoundingBox(10, new ArrayList<GridElement>(entities));
+		int width = boundingBox.width;
+		int height = boundingBox.height;
+		Image image = new Image(display, width, height);
+		org.eclipse.swt.graphics.Color bgColor = new org.eclipse.swt.graphics.Color(display, new RGB(255, 255, 255));
+		Transform transform = new Transform(display, 1, 0, 0, 1, -boundingBox.x, -boundingBox.y);
+
+		GC gc = new GC(image);
+		gc.setTransform(transform);
+		gc.setBackground(bgColor);
+		gc.fillRectangle(0, 0, width, height);
+
+		// List<GridElement> gridElements = diagram.getGridElements();
+		for (GridElement gridElement : entities) {
+			SWTComponent swtComp = (SWTComponent) gridElement.getComponent();
+			swtComp.drawOn(gc, false, 1d);
 		}
+
+		ImageData imageData = image.getImageData();
+		ImageLoader saver = new ImageLoader();
+		saver.data = new ImageData[] { imageData };
+		int format = SWT.IMAGE_PNG;
+		if (imgType.equalsIgnoreCase("jpg")) {
+			format = SWT.IMAGE_JPEG;
+		}
+		else if (imgType.equalsIgnoreCase("bmp")) {
+			format = SWT.IMAGE_BMP;
+		}
+		else if (imgType.equalsIgnoreCase("gif")) {
+			format = SWT.IMAGE_GIF;
+		}
+		saver.save(ostream, format);
+
 		ostream.flush();
 		ostream.close();
+
+		gc.dispose();
+		transform.dispose();
+		bgColor.dispose();
+		image.dispose();
 	}
 
-	private static boolean exportImgAndSetDpi(String imgType, OutputStream ostream, Collection<GridElement> entities, FontHandler diagramFont, Integer scale) throws IIOInvalidTreeException, IOException {
-		Integer dpi = Config.getInstance().getExportDpi();
-		if (dpi != null) {
-			for (Iterator<ImageWriter> iw = ImageIO.getImageWritersByFormatName(imgType); iw.hasNext();) {
-				ImageWriter writer = iw.next();
-				ImageWriteParam writeParam = writer.getDefaultWriteParam();
-				ImageTypeSpecifier typeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_RGB);
-				IIOMetadata metadata = writer.getDefaultImageMetadata(typeSpecifier, writeParam);
-				if (metadata.isReadOnly() || !metadata.isStandardMetadataFormatSupported()) {
-					continue;
-				}
-				setImgDPI(dpi, metadata);
+	// private static boolean exportImgAndSetDpi(String imgType, OutputStream ostream, Collection<GridElement> entities, FontHandler diagramFont, Integer scale) throws IIOInvalidTreeException, IOException {
+	// Integer dpi = Config.getInstance().getExportDpi();
+	// if (dpi != null) {
+	// for (Iterator<ImageWriter> iw = ImageIO.getImageWritersByFormatName(imgType); iw.hasNext();) {
+	// ImageWriter writer = iw.next();
+	// ImageWriteParam writeParam = writer.getDefaultWriteParam();
+	// ImageTypeSpecifier typeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_RGB);
+	// IIOMetadata metadata = writer.getDefaultImageMetadata(typeSpecifier, writeParam);
+	// if (metadata.isReadOnly() || !metadata.isStandardMetadataFormatSupported()) {
+	// continue;
+	// }
+	// setImgDPI(dpi, metadata);
+	//
+	// final ImageOutputStream stream = ImageIO.createImageOutputStream(ostream);
+	// try {
+	// writer.setOutput(stream);
+	// writer.write(metadata, new IIOImage(createImageForGridElements(entities, diagramFont, scale), null, metadata), writeParam);
+	// return true;
+	// } finally {
+	// stream.close();
+	// }
+	// }
+	// }
+	// return false;
+	// }
 
-				final ImageOutputStream stream = ImageIO.createImageOutputStream(ostream);
-				try {
-					writer.setOutput(stream);
-					writer.write(metadata, new IIOImage(createImageForGridElements(entities, diagramFont, scale), null, metadata), writeParam);
-					return true;
-				} finally {
-					stream.close();
-				}
-			}
-		}
-		return false;
-	}
-
-	private static void setImgDPI(Integer dpi, IIOMetadata metadata) throws IIOInvalidTreeException {
-		final double INCH_2_CM = 2.54;
-
-		double dotsPerMilli = 1.0 * dpi / 10 / INCH_2_CM;
-
-		IIOMetadataNode horiz = new IIOMetadataNode("HorizontalPixelSize");
-		horiz.setAttribute("value", Double.toString(dotsPerMilli));
-
-		IIOMetadataNode vert = new IIOMetadataNode("VerticalPixelSize");
-		vert.setAttribute("value", Double.toString(dotsPerMilli));
-
-		IIOMetadataNode dim = new IIOMetadataNode("Dimension");
-		dim.appendChild(horiz);
-		dim.appendChild(vert);
-
-		IIOMetadataNode root = new IIOMetadataNode("javax_imageio_1.0");
-		root.appendChild(dim);
-
-		metadata.mergeTree("javax_imageio_1.0", root);
-	}
+	// private static void setImgDPI(Integer dpi, IIOMetadata metadata) throws IIOInvalidTreeException {
+	// final double INCH_2_CM = 2.54;
+	//
+	// double dotsPerMilli = 1.0 * dpi / 10 / INCH_2_CM;
+	//
+	// IIOMetadataNode horiz = new IIOMetadataNode("HorizontalPixelSize");
+	// horiz.setAttribute("value", Double.toString(dotsPerMilli));
+	//
+	// IIOMetadataNode vert = new IIOMetadataNode("VerticalPixelSize");
+	// vert.setAttribute("value", Double.toString(dotsPerMilli));
+	//
+	// IIOMetadataNode dim = new IIOMetadataNode("Dimension");
+	// dim.appendChild(horiz);
+	// dim.appendChild(vert);
+	//
+	// IIOMetadataNode root = new IIOMetadataNode("javax_imageio_1.0");
+	// root.appendChild(dim);
+	//
+	// metadata.mergeTree("javax_imageio_1.0", root);
+	// }
 
 	public static BufferedImage createImageForGridElements(Collection<GridElement> entities, FontHandler diagramFont, int scale) {
 
@@ -214,6 +256,7 @@ public class SWTOutputHandler {
 		SWTDiagramHandler exportDiagram = new SWTDiagramHandler();
 		for (GridElement entity : entities) {
 			GridElement clone = factory.cloneForExport(entity, exportDiagram);
+			clone.updateModelFromText();
 			G2DComponent component = (G2DComponent) clone.getComponent();
 			component.paint(g2d);
 		}
