@@ -29,6 +29,7 @@ import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -61,6 +62,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private DiagramViewer exclusiveTo;
 	private DiagramController controller;
 	private final int gridSize = 10;
+	private int zoomPercent = 100;
 	private DiagramViewer editableDiagram;
 	private boolean readOnly;
 	private final Runnable canvasRedraw = new Runnable() {
@@ -77,19 +79,27 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		private IDragMachine dragMachine;
 		private Set<Direction> resizeDirections = Collections.emptySet();
 
+		private Point getScaledCoordinates(MouseEvent e) {
+			return new Point(e.x * 100 / zoomPercent, e.y * 100 / zoomPercent);
+		}
+
 		@Override
 		public void mouseScrolled(MouseEvent e) {
-			// TODO Auto-generated method stub
+			boolean isUp = e.count > 0;
+			if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+				Integer newZoom = Integer.valueOf(zoomPercent + (isUp ? 10 : -10));
+				doOperation(IOperationTarget.SET_ZOOM, null, newZoom);
+			}
 		}
 
 		@Override
 		public void mouseMove(MouseEvent e) {
+			Point point = getScaledCoordinates(e);
 			if (mouseDownAt == null) {
 				// plain mouse move
-				Point point = new Point(e.x, e.y);
 				GridElement onElement = getElementAtPosition(point);
 				if (onElement != null) {
-					resizeDirections = onElement.getResizeArea(e.x - onElement.getRectangle().x, e.y - onElement.getRectangle().y);
+					resizeDirections = onElement.getResizeArea(point.x - onElement.getRectangle().x, point.y - onElement.getRectangle().y);
 					canvas.setCursor(SWTConverter.cursor(onElement.getCursor(point, resizeDirections)));
 				}
 				else {
@@ -99,7 +109,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			}
 			else {
 				// mouse drag
-				if (dragMachine == null && Math.max(Math.abs(e.x - mouseDownAt.x), Math.abs(e.x - mouseDownAt.y)) >= gridSize) {
+				if (dragMachine == null && Math.max(Math.abs(point.x - mouseDownAt.x), Math.abs(point.y - mouseDownAt.y)) >= gridSize) {
 					if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
 						dragMachine = new LassoMachine(mouseDownAt);
 					}
@@ -116,7 +126,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				}
 			}
 			if (dragMachine != null) {
-				if (dragMachine.dragTo(new Point(e.x, e.y))) {
+				if (dragMachine.dragTo(point)) {
 					canvas.redraw();
 				}
 				if (dragMachine.isDone()) {
@@ -143,7 +153,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void mouseDown(MouseEvent e) {
-			Point point = new Point(e.x, e.y);
+			Point point = getScaledCoordinates(e);
 			canvas.setFocus();
 			if (e.button == 1) {
 				mouseDownAt = point;
@@ -290,6 +300,8 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		canvas.addPaintListener(new PaintListener() {
 			@Override
 			public void paintControl(PaintEvent e) {
+				Transform transform = new Transform(canvas.getDisplay(), zoomPercent / 100.0f, 0, 0, zoomPercent / 100.0f, 0, 0);
+				e.gc.setTransform(transform);
 				e.gc.setBackground(new Color(canvas.getDisplay(), new RGB(255, 255, 255)));
 				e.gc.fillRectangle(e.x, e.y, e.width, e.height);
 				List<GridElement> gridElements = diagram.getGridElements();
@@ -297,11 +309,14 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					SWTComponent swtComp = (SWTComponent) gridElement.getComponent();
 					swtComp.drawOn(e.gc, selector.isSelected(gridElement), 1d);
 				}
+				e.gc.setTransform(null);
+				transform.dispose();
 			}
 		});
 		InputHandler listener = new InputHandler();
 		canvas.addMouseListener(listener);
 		canvas.addMouseMoveListener(listener);
+		canvas.addMouseWheelListener(listener);
 		canvas.addKeyListener(listener);
 	}
 
@@ -749,9 +764,16 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			}
 		}
 
-		public void setZoom(int zoomPercent) {
-			// TODO Auto-generated method stub
+	}
+
+	public void setZoom(int zoomPercent) {
+		if (zoomPercent < 10) {
+			zoomPercent = 10;
 		}
+		else if (zoomPercent > 200) {
+			zoomPercent = 200;
+		}
+		this.zoomPercent = zoomPercent / 10 * 10;
 	}
 
 	private Point snapToGrid(Point point) {
@@ -823,7 +845,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				controller.setAttributes(value.toString(), elements);
 				break;
 			case IOperationTarget.SET_ZOOM:
-				controller.setZoom(((Integer) value).intValue());
+				setZoom(((Integer) value).intValue());
 				break;
 			default:
 				break;
@@ -857,5 +879,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 	public void setReadOnly(boolean readOnly) {
 		this.readOnly = readOnly;
+	}
+
+	public int getZoom() {
+		return zoomPercent;
 	}
 }

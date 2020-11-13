@@ -529,4 +529,8 @@ public class Editor extends EditorPart {
 		}
 		return selected;
 	}
+
+	public int getZoom() {
+		return diagramViewer.getZoom();
+	}
 }

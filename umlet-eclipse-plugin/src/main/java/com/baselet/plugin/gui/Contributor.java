@@ -11,6 +11,7 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IContributionItem;
+import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
@@ -48,6 +49,7 @@ public class Contributor extends EditorActionBarContributor {
 		actionNameToOperation.put(ActionName.DELETE, IOperationTarget.DELETE);
 		actionNameToOperation.put(ActionName.UNDO, IOperationTarget.UNDO);
 		actionNameToOperation.put(ActionName.REDO, IOperationTarget.REDO);
+		actionNameToOperation.put(ActionName.ZOOM, IOperationTarget.SET_ZOOM);
 	}
 
 	private final MenuFactoryEclipse menuFactory = MenuFactoryEclipse.getInstance();
@@ -165,6 +167,12 @@ public class Contributor extends EditorActionBarContributor {
 			action.setChecked(zoom == 100);
 			zoomMenu.add(action);
 		}
+		zoomMenu.addMenuListener(new IMenuListener() {
+			@Override
+			public void menuAboutToShow(IMenuManager manager) {
+				updateZoomMenuRadioButton(targetEditor.getZoom());
+			}
+		});
 		return zoomMenu;
 	}
 
@@ -210,7 +218,7 @@ public class Contributor extends EditorActionBarContributor {
 	public void updateZoomMenuRadioButton(int newGridSize) {
 		for (IContributionItem item : zoomMenu.getItems()) {
 			IAction action = ((ActionContributionItem) item).getAction();
-			int actionGridSize = Integer.parseInt(action.getText().substring(0, action.getText().length() - 2));
+			int actionGridSize = Integer.parseInt(action.getText().substring(0, action.getText().length() - 1));
 			if (actionGridSize == newGridSize) {
 				action.setChecked(true);
 			}
