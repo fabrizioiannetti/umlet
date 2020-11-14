@@ -25,6 +25,7 @@ Currently supported (bar any bug):
 * save
 * content assist in properties pane
 * png, bmp, jpeg export (no DPI metadata support)
+* render bold/italic text
 
 To do:
 

@@ -1,6 +1,7 @@
 package com.baselet.plugin.swt;
 
-import org.eclipse.jface.resource.FontDescriptor;
+import java.util.Set;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
@@ -20,6 +21,7 @@ import com.baselet.control.StringStyle;
 import com.baselet.control.basics.geom.DimensionDouble;
 import com.baselet.control.basics.geom.PointDouble;
 import com.baselet.control.enums.AlignHorizontal;
+import com.baselet.control.enums.FormatLabels;
 import com.baselet.diagram.draw.DrawFunction;
 import com.baselet.diagram.draw.DrawHandler;
 import com.baselet.diagram.draw.helper.ColorOwn;
@@ -28,6 +30,7 @@ import com.baselet.diagram.draw.helper.theme.Theme;
 import com.baselet.diagram.draw.helper.theme.ThemeFactory;
 import com.baselet.element.interfaces.Component;
 import com.baselet.element.interfaces.GridElement;
+import com.baselet.plugin.gui.EclipseGUI;
 
 /**
  * SWT representation of a GridElement.
@@ -105,11 +108,7 @@ public class SWTComponent implements Component {
 			Font oldFont = null;
 			if (fontMetrics.getHeight() != fontSize) {
 				oldFont = supportGC.getFont();
-				supportGC.setFont(
-						FontDescriptor
-								.createFrom(supportGC.getFont())
-								.setHeight(fontSize)
-								.createFont(getDevice()));
+				supportGC.setFont(EclipseGUI.getFontForSize(fontSize, oldFont));
 			}
 			Point extent = supportGC.stringExtent(singleLine.getStringWithoutMarkup());
 			if (oldFont != null) {
@@ -225,6 +224,9 @@ public class SWTComponent implements Component {
 
 		@Override
 		public void printHelper(final StringStyle[] lines, final PointDouble point, final AlignHorizontal align) {
+			if (lines.length == 0) {
+				return;
+			}
 			final double fontSizeInPixels = getFontSize();
 			addDrawable(new StyledDrawfunction() {
 				@Override
@@ -233,19 +235,18 @@ public class SWTComponent implements Component {
 					// of the surrounding box as reference, while swing uses the font baseline/bottom
 					double x = point.x;
 					double y = point.y - drawer.textHeightMax();
-					FontMetrics fontMetrics = supportGC.getFontMetrics();
 					final double ppi = 72;
 					final double dpi = supportGC.getDevice().getDPI().y;
 					final int fontSize = (int) (fontSizeInPixels / dpi * ppi);
-					if (fontMetrics.getHeight() != fontSize) {
-						supportGC.setFont(
-								FontDescriptor
-										.createFrom(supportGC.getFont())
-										.setHeight(fontSize)
-										.createFont(getDevice()));
-					}
 					supportGC.setAlpha(style.getForegroundColor().getAlpha());
 					for (StringStyle line : lines) {
+						Set<FormatLabels> format = line.getFormat();
+						final Font base = supportGC.getFont();
+						supportGC.setFont(EclipseGUI.getFontForSize(
+								fontSize,
+								base,
+								format.contains(FormatLabels.BOLD),
+								format.contains(FormatLabels.ITALIC)));
 						double dx = 0;
 						switch (align) {
 							case CENTER:
@@ -258,7 +259,7 @@ public class SWTComponent implements Component {
 							default:
 								break;
 						}
-						// TODO@fab use transparency = true for text, as the background alpha is not directly transferred
+						// set transparency = true for text, as the background alpha is not directly transferred
 						supportGC.drawText(line.getStringWithoutMarkup(), (int) (x + dx), (int) y, true);
 						y += textHeightMax();
 					}
