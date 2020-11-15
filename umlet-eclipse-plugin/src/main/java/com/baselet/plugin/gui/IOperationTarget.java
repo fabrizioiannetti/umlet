@@ -20,6 +20,8 @@ public interface IOperationTarget {
 	static final int SET_BG_COLOR = ITextOperationTarget.STRIP_PREFIX + 4;
 	static final int SET_ATTRIBUTES = ITextOperationTarget.STRIP_PREFIX + 5;
 	static final int SET_ZOOM = ITextOperationTarget.STRIP_PREFIX + 6;
+	static final int SCROLL_UP = ITextOperationTarget.STRIP_PREFIX + 7;
+	static final int SCROLL_DOWN = ITextOperationTarget.STRIP_PREFIX + 8;
 
 	/**
 	 * Returns whether the operation specified by the given operation code

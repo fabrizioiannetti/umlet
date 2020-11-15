@@ -63,6 +63,8 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private DiagramController controller;
 	private final int gridSize = 10;
 	private int zoomPercent = 100;
+	private Point origin = new Point(0, 0);
+	private final Point pan = new Point(0, 0);
 	private DiagramViewer editableDiagram;
 	private boolean readOnly;
 	private final Runnable canvasRedraw = new Runnable() {
@@ -79,22 +81,26 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		private IDragMachine dragMachine;
 		private Set<Direction> resizeDirections = Collections.emptySet();
 
-		private Point getScaledCoordinates(MouseEvent e) {
-			return new Point(e.x * 100 / zoomPercent, e.y * 100 / zoomPercent);
+		private Point getModelCoordinates(MouseEvent e) {
+			return new Point(e.x * 100 / zoomPercent - origin.x, e.y * 100 / zoomPercent - origin.y);
 		}
 
 		@Override
 		public void mouseScrolled(MouseEvent e) {
 			boolean isUp = e.count > 0;
-			if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
+			int modifier = e.stateMask & SWT.MODIFIER_MASK;
+			if (modifier == SWT.MOD1) {
 				Integer newZoom = Integer.valueOf(zoomPercent + (isUp ? 10 : -10));
 				doOperation(IOperationTarget.SET_ZOOM, null, newZoom);
+			}
+			else if (modifier == 0) {
+				doOperation(isUp ? IOperationTarget.SCROLL_DOWN : IOperationTarget.SCROLL_UP, null, null);
 			}
 		}
 
 		@Override
 		public void mouseMove(MouseEvent e) {
-			Point point = getScaledCoordinates(e);
+			Point point = getModelCoordinates(e);
 			if (mouseDownAt == null) {
 				// plain mouse move
 				GridElement onElement = getElementAtPosition(point);
@@ -113,16 +119,19 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					if ((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1) {
 						dragMachine = new LassoMachine(mouseDownAt);
 					}
+					else if ((e.stateMask & SWT.BUTTON_MASK) == SWT.BUTTON2) {
+						dragMachine = new PanMachine(mouseDownAt);
+					}
 					else if (!readOnly) {
+						boolean isShiftKeyDown = (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2;
 						if (resizeDirections.isEmpty()) {
-							boolean isShiftKeyDown = (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2;
 							System.out.println("DiagramViewer.InputHandler.mouseMove() isSHiftDwon=" + isShiftKeyDown);
 							dragMachine = new DragMachine(mouseDownAt, isShiftKeyDown);
 						}
 						else {
 							GridElement onElement = getElementAtPosition(mouseDownAt);
 							selector.selectOnly(onElement);
-							dragMachine = new ResizeMachine(mouseDownAt, resizeDirections, (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2);
+							dragMachine = new ResizeMachine(mouseDownAt, resizeDirections, isShiftKeyDown);
 						}
 					}
 				}
@@ -155,11 +164,15 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 		@Override
 		public void mouseDown(MouseEvent e) {
-			Point point = getScaledCoordinates(e);
+			Point point = getModelCoordinates(e);
 			canvas.setFocus();
 			if (e.button == 1) {
 				mouseDownAt = point;
 				selectAtMouseDownPosition((e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD1);
+			}
+			else if (e.button == 2) {
+				// only start dragging (the whole diagram), no selection
+				mouseDownAt = point;
 			}
 			else if (e.button == 3) {
 				GridElement selectedElement = getElementAtPosition(point);
@@ -303,7 +316,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		canvas.addPaintListener(new PaintListener() {
 			@Override
 			public void paintControl(PaintEvent e) {
-				Transform transform = new Transform(canvas.getDisplay(), zoomPercent / 100.0f, 0, 0, zoomPercent / 100.0f, 0, 0);
+				float s = zoomPercent / 100.0f;
+				float tx = s * (origin.x + pan.x);
+				float ty = s * (origin.y + pan.y);
+				Transform transform = new Transform(canvas.getDisplay(), s, 0, 0, s, tx, ty);
 				e.gc.setTransform(transform);
 				e.gc.setBackground(new Color(canvas.getDisplay(), new RGB(255, 255, 255)));
 				e.gc.fillRectangle(e.x, e.y, e.width, e.height);
@@ -563,6 +579,36 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 	}
 
+	private class PanMachine implements IDragMachine {
+		private final Point initial;
+
+		public PanMachine(Point oldPoint) {
+			initial = oldPoint.copy();
+			origin.copy();
+		}
+
+		@Override
+		public boolean dragTo(Point newPos) {
+			pan.x = newPos.x - initial.x;
+			pan.y = newPos.y - initial.y;
+			return true;
+		}
+
+		@Override
+		public void terminate() {
+			origin.x += pan.x;
+			origin.y += pan.y;
+			pan.x = 0;
+			pan.y = 0;
+		}
+
+		@Override
+		public boolean isDone() {
+			return false;
+		}
+
+	}
+
 	/**
 	 * Controller to apply modifications to the diagram.
 	 *
@@ -798,6 +844,8 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			case IOperationTarget.COPY:
 			case IOperationTarget.SELECT_ALL:
 			case IOperationTarget.DUPLICATE:
+			case IOperationTarget.SCROLL_UP:
+			case IOperationTarget.SCROLL_DOWN:
 				return true;
 			case IOperationTarget.DELETE:
 			case IOperationTarget.PASTE:
@@ -856,6 +904,12 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				break;
 			case IOperationTarget.SET_ZOOM:
 				setZoom(((Integer) value).intValue());
+				break;
+			case IOperationTarget.SCROLL_UP:
+				origin = new Point(origin.x, origin.y - gridSize);
+				break;
+			case IOperationTarget.SCROLL_DOWN:
+				origin = new Point(origin.x, origin.y + gridSize);
 				break;
 			default:
 				break;
