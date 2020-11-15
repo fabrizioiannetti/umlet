@@ -115,7 +115,9 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					}
 					else if (!readOnly) {
 						if (resizeDirections.isEmpty()) {
-							dragMachine = new DragMachine(mouseDownAt);
+							boolean isShiftKeyDown = (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2;
+							System.out.println("DiagramViewer.InputHandler.mouseMove() isSHiftDwon=" + isShiftKeyDown);
+							dragMachine = new DragMachine(mouseDownAt, isShiftKeyDown);
 						}
 						else {
 							GridElement onElement = getElementAtPosition(mouseDownAt);
@@ -244,7 +246,8 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					break;
 			}
 			if (xOffset != 0 || yOffset != 0) {
-				DragMachine dm = new DragMachine(new Point(0, 0));
+				boolean isShiftKeyDown = (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2;
+				DragMachine dm = new DragMachine(new Point(0, 0), isShiftKeyDown);
 				dm.dragTo(new Point(xOffset, yOffset));
 				dm.terminate();
 				canvas.redraw();
@@ -388,8 +391,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		private List<GridElement> elementsToDrag;
 		private final Map<GridElement, StickableMap> stickablesMap = new HashMap<GridElement, StickableMap>();
 		boolean firstDrag;
+		private final boolean isShiftKeyDown;
 
-		public DragMachine(Point startPoint) {
+		public DragMachine(Point startPoint, boolean isShiftKeyDown) {
+			this.isShiftKeyDown = isShiftKeyDown;
 			oldPoint = snapToGrid(startPoint);
 			List<GridElement> selectedElements = selector.getSelectedElements();
 			if (selectedElements.isEmpty()) {
@@ -400,8 +405,13 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				elementsToDrag = new ArrayList<GridElement>(selectedElements);
 			}
 			for (GridElement gridElement : elementsToDrag) {
-				StickableMap stickables = diagram.getStickables(gridElement, elementsToDrag);
-				stickablesMap.put(gridElement, stickables);
+				if (!isShiftKeyDown) {
+					StickableMap stickables = diagram.getStickables(gridElement, elementsToDrag);
+					stickablesMap.put(gridElement, stickables);
+				}
+				else {
+					stickablesMap.put(gridElement, StickableMap.EMPTY_MAP);
+				}
 			}
 			firstDrag = true;
 		}
@@ -429,12 +439,12 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 		private Command dragElements(Point off) {
 			if (elementsToDrag.size() == 1) {
 				GridElement e = elementsToDrag.get(0);
-				return new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, false, stickablesMap.get(e));
+				return new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, isShiftKeyDown, firstDrag, false, stickablesMap.get(e));
 			}
 			else {
 				Vector<Command> moveCommands = new Vector<Command>();
 				for (GridElement e : elementsToDrag) {
-					moveCommands.add(new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, false, firstDrag, true, stickablesMap.get(e)));
+					moveCommands.add(new Move(Collections.<Direction> emptySet(), e, off.x, off.y, oldPoint, isShiftKeyDown, firstDrag, true, stickablesMap.get(e)));
 				}
 				return new Macro(moveCommands);
 			}
