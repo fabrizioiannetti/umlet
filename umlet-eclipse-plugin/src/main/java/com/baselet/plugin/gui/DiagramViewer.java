@@ -160,6 +160,11 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					doOperation(DUPLICATE, null, null);
 				}
 			}
+			else {
+				origin.x = 0;
+				origin.y = 0;
+				doOperation(SET_ZOOM, null, Integer.valueOf(100));
+			}
 		}
 
 		@Override
@@ -906,10 +911,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				setZoom(((Integer) value).intValue());
 				break;
 			case IOperationTarget.SCROLL_UP:
-				origin = new Point(origin.x, origin.y - gridSize);
+				origin = new Point(origin.x, origin.y - 2 * gridSize);
 				break;
 			case IOperationTarget.SCROLL_DOWN:
-				origin = new Point(origin.x, origin.y + gridSize);
+				origin = new Point(origin.x, origin.y + 2 * gridSize);
 				break;
 			default:
 				break;
