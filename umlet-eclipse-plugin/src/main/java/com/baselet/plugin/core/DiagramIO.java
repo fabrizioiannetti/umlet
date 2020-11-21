@@ -1,4 +1,4 @@
-package com.baselet.plugin.swt;
+package com.baselet.plugin.core;
 
 import java.io.File;
 import java.io.FileInputStream;

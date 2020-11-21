@@ -36,6 +36,7 @@ import com.baselet.diagram.DiagramHandler;
 import com.baselet.diagram.DrawPanel;
 import com.baselet.diagram.FontHandler;
 import com.baselet.element.interfaces.GridElement;
+import com.baselet.plugin.core.DiagramModel;
 import com.baselet.plugin.export.G2DComponent;
 import com.itextpdf.awt.FontMapper;
 import com.itextpdf.awt.PdfGraphics2D;
@@ -156,7 +157,7 @@ public class SWTOutputHandler {
 	}
 
 	public static Image createImageForGridElements(Collection<GridElement> entities) {
-		SWTDiagramHandler diagram = new SWTDiagramHandler();
+		DiagramModel diagram = new DiagramModel();
 		Display display = Display.getDefault();
 		Rectangle boundingBox = diagram.getBoundingBox(10, new ArrayList<GridElement>(entities));
 		int width = boundingBox.width;
@@ -256,7 +257,7 @@ public class SWTOutputHandler {
 
 	public static void paintEntitiesIntoGraphics2D(Graphics2D g2d, Collection<GridElement> entities, FontHandler diagramFont) {
 		SWTElementFactory factory = new SWTElementFactory();
-		SWTDiagramHandler exportDiagram = new SWTDiagramHandler();
+		DiagramModel exportDiagram = new DiagramModel();
 		for (GridElement entity : entities) {
 			GridElement clone = factory.cloneForExport(entity, exportDiagram);
 			clone.updateModelFromText();

@@ -1,4 +1,4 @@
-package com.baselet.plugin.swt;
+package com.baselet.plugin.core;
 
 import com.baselet.control.basics.geom.Rectangle;
 import com.baselet.control.enums.ElementId;

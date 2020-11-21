@@ -60,9 +60,9 @@ import com.baselet.diagram.draw.helper.theme.ThemeFactory;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.old.custom.CustomElementHandler;
 import com.baselet.plugin.MainPlugin;
-import com.baselet.plugin.swt.DiagramIO;
-import com.baselet.plugin.swt.IElementFactory;
-import com.baselet.plugin.swt.SWTDiagramHandler;
+import com.baselet.plugin.core.DiagramIO;
+import com.baselet.plugin.core.IElementFactory;
+import com.baselet.plugin.core.DiagramModel;
 import com.baselet.plugin.swt.SWTElementFactory;
 
 public class Editor extends EditorPart {
@@ -111,7 +111,7 @@ public class Editor extends EditorPart {
 
 	private SourceViewer propertiesTextViewer;
 
-	private final SWTDiagramHandler diagram = new SWTDiagramHandler();
+	private final DiagramModel diagram = new DiagramModel();
 
 	private final IElementFactory factory = new SWTElementFactory();
 
@@ -465,7 +465,7 @@ public class Editor extends EditorPart {
 	}
 
 	private void setCurrentPalette(File paletteFile, boolean refreshViewer) {
-		SWTDiagramHandler paletteDiagram = new SWTDiagramHandler();
+		DiagramModel paletteDiagram = new DiagramModel();
 		DiagramIO.readFromFile(paletteFile, paletteDiagram, factory, null);
 		paletteViewer.setInput(paletteDiagram);
 		if (refreshViewer) {

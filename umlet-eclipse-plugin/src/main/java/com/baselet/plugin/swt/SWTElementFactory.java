@@ -9,6 +9,7 @@ import com.baselet.element.interfaces.Diagram;
 import com.baselet.element.interfaces.DrawHandlerInterface;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.sticking.StickableMap;
+import com.baselet.plugin.core.IElementFactory;
 import com.baselet.plugin.export.G2DComponent;
 
 public class SWTElementFactory extends ElementFactory implements IElementFactory {

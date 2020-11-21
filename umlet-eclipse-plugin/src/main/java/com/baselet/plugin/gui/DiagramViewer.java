@@ -46,10 +46,10 @@ import com.baselet.element.interfaces.HasGridElements;
 import com.baselet.element.sticking.StickableMap;
 import com.baselet.plugin.command.Macro;
 import com.baselet.plugin.command.Move;
+import com.baselet.plugin.core.DiagramModel;
 import com.baselet.plugin.swt.SWTClipBoard;
 import com.baselet.plugin.swt.SWTComponent;
 import com.baselet.plugin.swt.SWTConverter;
-import com.baselet.plugin.swt.SWTDiagramHandler;
 import com.baselet.plugin.swt.SWTElementFactory;
 
 public class DiagramViewer extends Viewer implements IOperationTarget {
@@ -57,7 +57,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private static final Color DEFAULT_BACKGROUND = new Color(Display.getDefault(), 255, 255, 255);
 	private static final SWTElementFactory ELEMENT_FACTORY = new SWTElementFactory();
 	private final Canvas canvas;
-	private SWTDiagramHandler diagram;
+	private DiagramModel diagram;
 	private Selector selector;
 	private DiagramViewer exclusiveTo;
 	private DiagramController controller;
@@ -312,7 +312,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	public DiagramViewer(Composite parent) {
 		canvas = new Canvas(parent, SWT.NONE);
 		canvas.setBackground(DEFAULT_BACKGROUND);
-		diagram = new SWTDiagramHandler();
+		diagram = new DiagramModel();
 		selector = new DiagramElementSelector(diagram);
 		initCanvas();
 	}
@@ -366,8 +366,8 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 
 	@Override
 	public void setInput(Object input) {
-		if (input instanceof SWTDiagramHandler) {
-			diagram = (SWTDiagramHandler) input;
+		if (input instanceof DiagramModel) {
+			diagram = (DiagramModel) input;
 			selector = new DiagramElementSelector(diagram);
 			controller = new DiagramController(diagram, selector, canvasRedraw);
 		}
@@ -620,11 +620,11 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	 * It extends the Baselet common undo/redo operations.
 	 */
 	private static class DiagramController extends Controller {
-		private final SWTDiagramHandler diagram;
+		private final DiagramModel diagram;
 		private final Selector selector;
 		private final Runnable uiUpdater;
 
-		public DiagramController(SWTDiagramHandler diagram, Selector selector, Runnable uiUpdater) {
+		public DiagramController(DiagramModel diagram, Selector selector, Runnable uiUpdater) {
 			super();
 			this.diagram = diagram;
 			this.selector = selector;

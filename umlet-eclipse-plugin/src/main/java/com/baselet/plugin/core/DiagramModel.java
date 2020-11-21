@@ -1,4 +1,4 @@
-package com.baselet.plugin.swt;
+package com.baselet.plugin.core;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,7 +24,7 @@ import com.baselet.gui.AutocompletionText;
  * @author fab
  *
  */
-public class SWTDiagramHandler implements Diagram {
+public class DiagramModel implements Diagram {
 
 	private final List<GridElement> gridElements;
 
@@ -32,15 +32,15 @@ public class SWTDiagramHandler implements Diagram {
 
 	private String helptext;
 
-	public SWTDiagramHandler() {
+	public DiagramModel() {
 		this(null, new ArrayList<GridElement>());
 	}
 
-	public SWTDiagramHandler(List<GridElement> gridElements) {
+	public DiagramModel(List<GridElement> gridElements) {
 		this(null, gridElements);
 	}
 
-	public SWTDiagramHandler(String helpText, List<GridElement> gridElements) {
+	public DiagramModel(String helpText, List<GridElement> gridElements) {
 		super();
 		this.helpText = helpText;
 		this.gridElements = gridElements;
@@ -81,6 +81,8 @@ public class SWTDiagramHandler implements Diagram {
 		return getStickables(draggedElement, Collections.<GridElement> emptyList());
 	}
 
+	// Relations implement both GridElement and Stickable
+	@SuppressWarnings("unlikely-arg-type")
 	@Override
 	public StickableMap getStickables(GridElement draggedElement, Collection<GridElement> excludeList) {
 		if (!SharedConfig.getInstance().isStickingEnabled()) {
