@@ -481,6 +481,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 	private class ResizeMachine implements IDragMachine {
 		private Point oldPoint;
 		private final List<GridElement> elementsToResize;
+		private final Map<GridElement, StickableMap> stickablesMap = new HashMap<GridElement, StickableMap>();
 		boolean firstDrag;
 		private final Set<Direction> resizeDirections;
 		private final boolean keepProportions;
@@ -491,6 +492,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			oldPoint = snapToGrid(startPoint);
 			List<GridElement> selectedElements = selector.getSelectedElements();
 			elementsToResize = new ArrayList<GridElement>(selectedElements);
+			for (GridElement gridElement : elementsToResize) {
+				StickableMap stickables = diagram.getStickables(gridElement, elementsToResize);
+				stickablesMap.put(gridElement, stickables);
+			}
 			firstDrag = true;
 		}
 
@@ -506,7 +511,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			Point snapPos = snapToGrid(newPos);
 			Point off = new Point(snapPos.x - oldPoint.x, snapPos.y - oldPoint.y);
 			if (off.x != 0 || off.y != 0) {
-				dragElements(off);
+				resizeElements(off);
 				oldPoint = snapPos;
 				firstDrag = false;
 				return true; // moved
@@ -514,10 +519,10 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 			return false;
 		}
 
-		private void dragElements(Point off) {
+		private void resizeElements(Point off) {
 			Vector<Command> moveCommands = new Vector<Command>();
 			for (GridElement e : elementsToResize) {
-				moveCommands.add(new Move(resizeDirections, e, off.x, off.y, oldPoint, keepProportions, firstDrag, false, StickableMap.EMPTY_MAP));
+				moveCommands.add(new Move(resizeDirections, e, off.x, off.y, oldPoint, keepProportions, firstDrag, false, stickablesMap.get(e)));
 			}
 			controller.executeCommand(new Macro(moveCommands));
 		}
