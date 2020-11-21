@@ -1,4 +1,4 @@
-package com.baselet.plugin.gui;
+package com.baselet.plugin.core;
 
 import java.util.ArrayList;
 import java.util.List;

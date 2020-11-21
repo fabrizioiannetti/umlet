@@ -46,6 +46,7 @@ import com.baselet.element.interfaces.HasGridElements;
 import com.baselet.element.sticking.StickableMap;
 import com.baselet.plugin.command.Macro;
 import com.baselet.plugin.command.Move;
+import com.baselet.plugin.core.Controller;
 import com.baselet.plugin.core.DiagramModel;
 import com.baselet.plugin.swt.SWTClipBoard;
 import com.baselet.plugin.swt.SWTComponent;
