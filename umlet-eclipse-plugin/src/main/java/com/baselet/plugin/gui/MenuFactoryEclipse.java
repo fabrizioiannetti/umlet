@@ -26,6 +26,8 @@ import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.swt.program.Program;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,10 +64,33 @@ public class MenuFactoryEclipse {
 		// If the action is not overwritten, it is part of the default actions
 		else {
 			log.debug("super.doAction");
+			if (menuItem.equals(ONLINE_HELP)) {
+				openBrowser(com.baselet.control.enums.Program.getInstance().getWebsite() + "/faq.htm");
+			}
+			else if (menuItem.equals(ONLINE_SAMPLE_DIAGRAMS)) {
+				openBrowser("http://www.itmeyer.at/umlet/uml2/");
+			}
+			else if (menuItem.equals(VIDEO_TUTORIAL)) {
+				openBrowser("http://www.youtube.com/watch?v=3UHZedDtr28");
+			}
+			else if (menuItem.equals(PROGRAM_HOMEPAGE)) {
+				openBrowser(com.baselet.control.enums.Program.getInstance().getWebsite());
+			}
+			else if (menuItem.equals(RATE_PROGRAM)) {
+				openBrowser("http://marketplace.eclipse.org/content/umlet-uml-tool-fast-uml-diagrams");
+			}
+			else if (menuItem.equals(ABOUT_PROGRAM)) {
+				MessageDialog.openInformation(null, "About UMLet", "UMLet version \n\nReleased under the terms of the\nGNU General Public License");
+			}
 			// super.doAction(menuItem, param);
 			log.debug("super.doAction complete");
 		}
 		log.debug("doAction complete");
+	}
+
+	private void openBrowser(String url) {
+		Program program = Program.findProgram("html");
+		program.execute(url);
 	}
 
 	public Action createOptions() {
