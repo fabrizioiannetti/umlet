@@ -5,9 +5,10 @@ import java.util.List;
 
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.ImageTransfer;
+import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.widgets.Display;
 
 import com.baselet.control.basics.geom.Rectangle;
@@ -18,9 +19,10 @@ import com.baselet.plugin.gui.EclipseGUI;
 public class SWTClipBoard {
 	private static final SWTElementFactory ELEMENT_FACTORY = new SWTElementFactory();
 	private final static List<GridElement> content = new ArrayList<GridElement>();
-	private final static Clipboard clipboard = new Clipboard(Display.getDefault());
+	private static Clipboard clipboard = null;
 
 	public static void copyElements(List<GridElement> elements) {
+		clipboard = new Clipboard(Display.getDefault());
 		SWTDiagramHandler targetDiagram = new SWTDiagramHandler();
 		content.clear();
 		for (GridElement gridElement : elements) {
@@ -29,9 +31,11 @@ public class SWTClipBoard {
 		targetDiagram.getGridElements().addAll(content);
 		Rectangle boundingBox = targetDiagram.getBoundingBox(Config.getInstance().getPrintPadding());
 		if (boundingBox.width > 0 && boundingBox.height > 0) {
-			// TODO@fab: render image
-			Object[] data = new Object[] { new ImageData(boundingBox.width, boundingBox.height, 32, new PaletteData(0xff0000, 0x00ff00, 0x0000ff)) };
-			Transfer[] dataTypes = new Transfer[] { ImageTransfer.getInstance() };
+			Image image = SWTOutputHandler.createImageForGridElements(content);
+			ImageData imageData = image.getImageData();
+			image.dispose();
+			Object[] data = new Object[] { imageData, "ImageData(" + imageData.width + "," + imageData.height + ")" };
+			Transfer[] dataTypes = new Transfer[] { ImageTransfer.getInstance(), TextTransfer.getInstance() };
 			clipboard.setContents(data, dataTypes);
 			EclipseGUI.setPasteAvailable(true);
 		}

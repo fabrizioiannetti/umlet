@@ -2,7 +2,6 @@ package com.baselet.plugin.swt;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -33,7 +32,6 @@ import com.baselet.control.basics.geom.Dimension;
 import com.baselet.control.basics.geom.Rectangle;
 import com.baselet.control.config.Config;
 import com.baselet.control.enums.Program;
-import com.baselet.control.util.Utils;
 import com.baselet.diagram.DiagramHandler;
 import com.baselet.diagram.DrawPanel;
 import com.baselet.diagram.FontHandler;
@@ -134,25 +132,7 @@ public class SWTOutputHandler {
 		// ImageIO.write(createImageForGridElements(entities, diagramFont, scale), imgType, ostream);
 		// }
 
-		SWTDiagramHandler diagram = new SWTDiagramHandler();
-		Display display = Display.getDefault();
-		Rectangle boundingBox = diagram.getBoundingBox(10, new ArrayList<GridElement>(entities));
-		int width = boundingBox.width;
-		int height = boundingBox.height;
-		Image image = new Image(display, width, height);
-		org.eclipse.swt.graphics.Color bgColor = new org.eclipse.swt.graphics.Color(display, new RGB(255, 255, 255));
-		Transform transform = new Transform(display, 1, 0, 0, 1, -boundingBox.x, -boundingBox.y);
-
-		GC gc = new GC(image);
-		gc.setTransform(transform);
-		gc.setBackground(bgColor);
-		gc.fillRectangle(0, 0, width, height);
-
-		// List<GridElement> gridElements = diagram.getGridElements();
-		for (GridElement gridElement : entities) {
-			SWTComponent swtComp = (SWTComponent) gridElement.getComponent();
-			swtComp.drawOn(gc, false);
-		}
+		Image image = createImageForGridElements(entities);
 
 		ImageData imageData = image.getImageData();
 		ImageLoader saver = new ImageLoader();
@@ -172,10 +152,33 @@ public class SWTOutputHandler {
 		ostream.flush();
 		ostream.close();
 
+		image.dispose();
+	}
+
+	public static Image createImageForGridElements(Collection<GridElement> entities) {
+		SWTDiagramHandler diagram = new SWTDiagramHandler();
+		Display display = Display.getDefault();
+		Rectangle boundingBox = diagram.getBoundingBox(10, new ArrayList<GridElement>(entities));
+		int width = boundingBox.width;
+		int height = boundingBox.height;
+		Image image = new Image(display, width, height);
+		org.eclipse.swt.graphics.Color bgColor = new org.eclipse.swt.graphics.Color(display, new RGB(255, 255, 255));
+		Transform transform = new Transform(display, 1, 0, 0, 1, -boundingBox.x, -boundingBox.y);
+
+		GC gc = new GC(image);
+		gc.setTransform(transform);
+		gc.setBackground(bgColor);
+		gc.fillRectangle(0, 0, width, height);
+
+		// List<GridElement> gridElements = diagram.getGridElements();
+		for (GridElement gridElement : entities) {
+			SWTComponent swtComp = (SWTComponent) gridElement.getComponent();
+			swtComp.drawOn(gc, false);
+		}
 		gc.dispose();
 		transform.dispose();
 		bgColor.dispose();
-		image.dispose();
+		return image;
 	}
 
 	// private static boolean exportImgAndSetDpi(String imgType, OutputStream ostream, Collection<GridElement> entities, FontHandler diagramFont, Integer scale) throws IIOInvalidTreeException, IOException {
@@ -225,20 +228,20 @@ public class SWTOutputHandler {
 	// metadata.mergeTree("javax_imageio_1.0", root);
 	// }
 
-	public static BufferedImage createImageForGridElements(Collection<GridElement> entities, FontHandler diagramFont, int scale) {
-
-		Rectangle bounds = DrawPanel.getContentBounds(Config.getInstance().getPrintPadding(), entities);
-		BufferedImage im = new BufferedImage(bounds.width == 0 ? 1 : bounds.width * scale, bounds.height == 0 ? 1 : bounds.height * scale, BufferedImage.TYPE_INT_RGB);
-		Graphics2D graphics2d = im.createGraphics();
-		graphics2d.setRenderingHints(Utils.getUxRenderingQualityHigh(true));
-
-		setGraphicsBorders(bounds, graphics2d, scale);
-		graphics2d.scale(scale, scale);
-		paintEntitiesIntoGraphics2D(graphics2d, entities, diagramFont);
-		graphics2d.dispose();
-
-		return im;
-	}
+	// public static BufferedImage createImageForGridElements(Collection<GridElement> entities, FontHandler diagramFont, int scale) {
+	//
+	// Rectangle bounds = DrawPanel.getContentBounds(Config.getInstance().getPrintPadding(), entities);
+	// BufferedImage im = new BufferedImage(bounds.width == 0 ? 1 : bounds.width * scale, bounds.height == 0 ? 1 : bounds.height * scale, BufferedImage.TYPE_INT_RGB);
+	// Graphics2D graphics2d = im.createGraphics();
+	// graphics2d.setRenderingHints(Utils.getUxRenderingQualityHigh(true));
+	//
+	// setGraphicsBorders(bounds, graphics2d, scale);
+	// graphics2d.scale(scale, scale);
+	// paintEntitiesIntoGraphics2D(graphics2d, entities, diagramFont);
+	// graphics2d.dispose();
+	//
+	// return im;
+	// }
 
 	private static void setGraphicsBorders(Rectangle bounds, Graphics2D graphics2d, int scale) {
 		graphics2d.translate(-bounds.x * scale, -bounds.y * scale);

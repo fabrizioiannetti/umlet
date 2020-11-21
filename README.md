@@ -38,7 +38,7 @@ To do:
 
 known bugs:
 
-* lw > 1 not rendered correctly
+* selection is not copied to the clipboard as image
 
 Not planned:
 
