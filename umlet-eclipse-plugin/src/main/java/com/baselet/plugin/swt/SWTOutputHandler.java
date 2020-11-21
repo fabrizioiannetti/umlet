@@ -151,7 +151,7 @@ public class SWTOutputHandler {
 		// List<GridElement> gridElements = diagram.getGridElements();
 		for (GridElement gridElement : entities) {
 			SWTComponent swtComp = (SWTComponent) gridElement.getComponent();
-			swtComp.drawOn(gc, false, 1d);
+			swtComp.drawOn(gc, false);
 		}
 
 		ImageData imageData = image.getImageData();

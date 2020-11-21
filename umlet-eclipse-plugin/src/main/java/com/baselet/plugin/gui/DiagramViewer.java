@@ -331,7 +331,7 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 				List<GridElement> gridElements = diagram.getGridElements();
 				for (GridElement gridElement : gridElements) {
 					SWTComponent swtComp = (SWTComponent) gridElement.getComponent();
-					swtComp.drawOn(e.gc, selector.isSelected(gridElement), 1d);
+					swtComp.drawOn(e.gc, selector.isSelected(gridElement));
 				}
 				e.gc.setTransform(null);
 				transform.dispose();
