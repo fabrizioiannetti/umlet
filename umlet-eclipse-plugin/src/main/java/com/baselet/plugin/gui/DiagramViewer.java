@@ -126,7 +126,6 @@ public class DiagramViewer extends Viewer implements IOperationTarget {
 					else if (!readOnly) {
 						boolean isShiftKeyDown = (e.stateMask & SWT.MODIFIER_MASK) == SWT.MOD2;
 						if (resizeDirections.isEmpty()) {
-							System.out.println("DiagramViewer.InputHandler.mouseMove() isSHiftDwon=" + isShiftKeyDown);
 							dragMachine = new DragMachine(mouseDownAt, isShiftKeyDown);
 						}
 						else {

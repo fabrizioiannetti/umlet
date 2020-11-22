@@ -61,8 +61,8 @@ import com.baselet.element.interfaces.GridElement;
 import com.baselet.element.old.custom.CustomElementHandler;
 import com.baselet.plugin.MainPlugin;
 import com.baselet.plugin.core.DiagramIO;
-import com.baselet.plugin.core.IElementFactory;
 import com.baselet.plugin.core.DiagramModel;
+import com.baselet.plugin.core.IElementFactory;
 import com.baselet.plugin.swt.SWTElementFactory;
 
 public class Editor extends EditorPart {
@@ -163,22 +163,20 @@ public class Editor extends EditorPart {
 	}
 
 	private final class DiagramSelectionToAttributesBinding implements ISelectionChangedListener, ITextListener {
-		private boolean syncBack;
 		private DiagramViewer source;
 
 		@Override
 		public void selectionChanged(SelectionChangedEvent event) {
 			event.getSource();
+			DiagramViewer newSource = (DiagramViewer) event.getSource();
+			if (source != newSource) {
+				source = newSource;
+				propertiesTextViewer.setEditable(!source.isReadOnly());
+			}
 			// TODO@fab needs a newer target to build with tycho
 			// Object[] array = event.getStructuredSelection().toArray();
 			Object[] array = ((IStructuredSelection) event.getSelection()).toArray();
 			if (array.length > 0) {
-				if (syncBack) {
-					DiagramViewer newSource = (DiagramViewer) event.getSource();
-					if (source != newSource) {
-						source = newSource;
-					}
-				}
 				GridElement e = (GridElement) array[array.length - 1];
 				if (!e.getPanelAttributes().equals(propertiesTextViewer.getDocument().get())) {
 					propertiesTextViewer.getDocument().set(e.getPanelAttributes());
@@ -194,12 +192,6 @@ public class Editor extends EditorPart {
 			Contributor contributor = (Contributor) getEditorSite().getActionBarContributor();
 			contributor.setElementsSelected(array.length > 0);
 			dirtyChanged();
-		}
-
-		public DiagramSelectionToAttributesBinding bidirectional() {
-			syncBack = true;
-			propertiesTextViewer.addTextListener(this);
-			return this;
 		}
 
 		@Override
@@ -265,8 +257,10 @@ public class Editor extends EditorPart {
 		paletteViewer.setExclusiveTo(diagramViewer);
 
 		// listen to selection changes in diagrams and update properties content
-		diagramViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding().bidirectional());
-		paletteViewer.addSelectionChangedListener(new DiagramSelectionToAttributesBinding());
+		DiagramSelectionToAttributesBinding selectionToAttributesBinding = new DiagramSelectionToAttributesBinding();
+		diagramViewer.addSelectionChangedListener(selectionToAttributesBinding);
+		paletteViewer.addSelectionChangedListener(selectionToAttributesBinding);
+		propertiesTextViewer.addTextListener(selectionToAttributesBinding);
 
 		// install content assist on the properties viewer
 		configureContentAssistant();
@@ -295,8 +289,6 @@ public class Editor extends EditorPart {
 
 		MenuManager paletteMM = new MenuManager();
 		paletteMM.add(copyAction);
-		paletteMM.add(cutAction);
-		paletteMM.add(pasteAction);
 		paletteMM.add(selectAllAction);
 		paletteMM.add(new Separator());
 		paletteMM.add(createPalettesListSubmenu());
