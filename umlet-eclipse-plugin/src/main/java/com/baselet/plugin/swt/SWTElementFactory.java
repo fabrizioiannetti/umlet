@@ -44,6 +44,7 @@ public class SWTElementFactory extends ElementFactory implements IElementFactory
 		return element;
 	}
 
+	@Override
 	public GridElement create(GridElement src, final Diagram targetDiagram) {
 		return create(src.getId(), src.getRectangle().copy(), src.getPanelAttributes(), src.getAdditionalAttributes(), targetDiagram);
 	}

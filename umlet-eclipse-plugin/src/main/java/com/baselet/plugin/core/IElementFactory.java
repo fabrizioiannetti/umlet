@@ -7,6 +7,8 @@ import com.baselet.element.interfaces.GridElement;
 
 public interface IElementFactory {
 
-	GridElement create(ElementId id, Rectangle rect, String panelAttributes, String additionalPanelAttributes, Diagram diagram);
+	public GridElement create(ElementId id, Rectangle rect, String panelAttributes, String additionalPanelAttributes, Diagram diagram);
+
+	public GridElement create(GridElement src, final Diagram targetDiagram);
 
 }

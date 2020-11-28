@@ -1,4 +1,4 @@
-package com.baselet.plugin.command;
+package com.baselet.plugin.core.controller;
 
 import java.util.Collection;
 

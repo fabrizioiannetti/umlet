@@ -15,14 +15,16 @@ import com.baselet.control.basics.geom.Rectangle;
 import com.baselet.control.config.Config;
 import com.baselet.element.interfaces.GridElement;
 import com.baselet.plugin.core.DiagramModel;
+import com.baselet.plugin.core.IClipboard;
 import com.baselet.plugin.gui.EclipseGUI;
 
-public class SWTClipBoard {
+public class SWTClipBoard implements IClipboard {
 	private static final SWTElementFactory ELEMENT_FACTORY = new SWTElementFactory();
 	private final static List<GridElement> content = new ArrayList<GridElement>();
 	private static Clipboard clipboard = null;
 
-	public static void copyElements(List<GridElement> elements) {
+	@Override
+	public void copyElements(List<GridElement> elements) {
 		clipboard = new Clipboard(Display.getDefault());
 		DiagramModel targetDiagram = new DiagramModel();
 		content.clear();
@@ -46,11 +48,16 @@ public class SWTClipBoard {
 		}
 	}
 
-	public static void pasteElements(List<GridElement> targetList, DiagramModel targetDiagram) {
+	@Override
+	public void pasteElements(List<GridElement> targetList, DiagramModel targetDiagram) {
 		List<GridElement> elementsToPaste = new ArrayList<GridElement>();
 		for (GridElement gridElement : content) {
 			elementsToPaste.add(ELEMENT_FACTORY.create(gridElement, targetDiagram));
 		}
 		targetList.addAll(elementsToPaste);
+	}
+
+	public static IClipboard get() {
+		return new SWTClipBoard();
 	}
 }
