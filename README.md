@@ -26,15 +26,16 @@ Currently supported (bar any bug):
 * content assist in properties pane
 * png, bmp, jpeg export (no DPI metadata support)
 * render bold/italic text
+* zoom
 
 To do:
 
 * save as
 * export diagram (svg, pdf, eps, gif)
 * grouping
-* zoom
 * custom elements
 * any subtle change...
+* option dialogs (preferences page?)
 
 known bugs:
 
